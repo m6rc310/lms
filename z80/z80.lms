@@ -1,0 +1,3672 @@
+unit z80;
+
+import system (
+  exit:0:1,
+  memory:1:0,
+  open:1:2,
+  seek:1:2,
+  read:1:2,
+  int64 in,
+  int64 out,
+  int64 O_RDONLY,
+  int64 SEEK_SET,
+  int64 SEEK_END
+);
+
+import string (
+  write:0:2,
+  hexadecimal:1:0,
+  decimal:1:0,
+  buffer,
+  int8 hexDigit
+);
+
+functions
+  opIXIY:0:0,
+  
+  NOP:0:0,
+  LD_BC_nn:0:0,
+  LD__BC__a:0:0,
+  INC_BC:0:0,
+  INC_B:0:0,
+  DEC_B:0:0,
+  LD_B_n:0:0,
+  RLC_A:0:0,
+  EX_AF_AF:0:0,
+  ADD_HL_BC:0:0,
+  LD_A__BC_:0:0,
+  DEC_BC:0:0,
+  INC_C:0:0,
+  DEC_C:0:0,
+  LD_C_n:0:0,
+  RRC_A:0:0,
+  DJNZ_d:0:0,
+  LD_DE_nn:0:0,
+  LD__DE_A:0:0,
+  INC_DE:0:0,
+  INC_D:0:0,
+  DEC_D:0:0,
+  LD_D_n:0:0,
+  RL_A:0:0,
+  JR_d:0:0,
+  ADD_HL_DE:0:0,
+  LD_A__DE_:0:0,
+  DEC_DE:0:0,
+  INC_E:0:0,
+  DEC_E:0:0,
+  LD_E_n:0:0,
+  RR_A:0:0,
+  JRNZ_d:0:0,
+  LD_HL_nn:0:0,
+  LD__nn__HL:0:0,
+  INC_HL:0:0,
+  INC_H:0:0,
+  DEC_H:0:0,
+  LD_H_n:0:0,
+  DA_A:0:0,
+  JRZ_d:0:0,
+  ADD_HL_HL:0:0,
+  LD_HL__nn_:0:0,
+  DEC_HL:0:0,
+  INC_L:0:0,
+  DEC_L:0:0,
+  LD_L_n:0:0,
+  CPL:0:0,
+  JRNC_d:0:0,
+  LD_SP_nn:0:0,
+  LD__nn__A:0:0,
+  INC_SP:0:0,
+  INC__HL_:0:0,
+  DEC__HL_:0:0,
+  LD__HL__n:0:0,
+  SCF:0:0,
+  JRC_d:0:0,
+  ADD_HL_SP:0:0,
+  LD_A__nn_:0:0,
+  DEC_SP:0:0,
+  INC_A:0:0,
+  DEC_A:0:0,
+  LD_A_n:0:0,
+  CCF:0:0,
+//LD_B_B:0:0,
+  LD_B_C:0:0,
+  LD_B_D:0:0,
+  LD_B_E:0:0,
+  LD_B_H:0:0,
+  LD_B_L:0:0,
+  LD_B__HL_:0:0,
+  LD_B_A:0:0,
+  LD_C_B:0:0,
+//LD_C_C:0:0,
+  LD_C_D:0:0,
+  LD_C_E:0:0,
+  LD_C_H:0:0,
+  LD_C_L:0:0,
+  LD_C__HL_:0:0,
+  LD_C_A:0:0,
+  LD_D_B:0:0,
+  LD_D_C:0:0,
+//LD_D_D:0:0,
+  LD_D_E:0:0,
+  LD_D_H:0:0,
+  LD_D_L:0:0,
+  LD_D__HL_:0:0,
+  LD_D_A:0:0,
+  LD_E_B:0:0,
+  LD_E_C:0:0,
+  LD_E_D:0:0,
+//LD_E_E:0:0,
+  LD_E_H:0:0,
+  LD_E_L:0:0,
+  LD_E__HL_:0:0,
+  LD_E_A:0:0,
+  LD_H_B:0:0,
+  LD_H_C:0:0,
+  LD_H_D:0:0,
+  LD_H_E:0:0,
+//LD_H_H:0:0,
+  LD_H_L:0:0,
+  LD_H__HL_:0:0,
+  LD_H_A:0:0,
+  LD_L_B:0:0,
+  LD_L_C:0:0,
+  LD_L_D:0:0,
+  LD_L_E:0:0,
+  LD_L_H:0:0,
+//LD_L_L:0:0,
+  LD_L__HL_:0:0,
+  LD_L_A:0:0,
+  LD__HL__B:0:0,
+  LD__HL__C:0:0,
+  LD__HL__D:0:0,
+  LD__HL__E:0:0,
+  LD__HL__H:0:0,
+  LD__HL__L:0:0,
+  HALT:0:0,
+  LD__HL__A:0:0,
+  LD_A_B:0:0,
+  LD_A_C:0:0,
+  LD_A_D:0:0,
+  LD_A_E:0:0,
+  LD_A_H:0:0,
+  LD_A_L:0:0,
+  LD_A__HL_:0:0,
+//LD_A_A:0:0,
+  ADD_A_B:0:0,
+  ADD_A_C:0:0,
+  ADD_A_D:0:0,
+  ADD_A_E:0:0,
+  ADD_A_H:0:0,
+  ADD_A_L:0:0,
+  ADD_A__HL_:0:0,
+  ADD_A_A:0:0,
+  ADC_A_B:0:0,
+  ADC_A_C:0:0,
+  ADC_A_D:0:0,
+  ADC_A_E:0:0,
+  ADC_A_H:0:0,
+  ADC_A_L:0:0,
+  ADC_A__HL_:0:0,
+  ADC_A_A:0:0,
+  SUB_A_B:0:0,
+  SUB_A_C:0:0,
+  SUB_A_D:0:0,
+  SUB_A_E:0:0,
+  SUB_A_H:0:0,
+  SUB_A_L:0:0,
+  SUB_A__HL_:0:0,
+  SUB_A_A:0:0,
+  SBC_A_B:0:0,
+  SBC_A_C:0:0,
+  SBC_A_D:0:0,
+  SBC_A_E:0:0,
+  SBC_A_H:0:0,
+  SBC_A_L:0:0,
+  SBC_A__HL_:0:0,
+  SBC_A_A:0:0,
+  SUB_A_B:0:0,
+  SUB_A_C:0:0,
+  SUB_A_D:0:0,
+  SUB_A_E:0:0,
+  SUB_A_H:0:0,
+  SUB_A_L:0:0,
+  SUB_A__HL_:0:0,
+  SUB_A_A:0:0,
+  SBC_A_B:0:0,
+  SBC_A_C:0:0,
+  SBC_A_D:0:0,
+  SBC_A_E:0:0,
+  SBC_A_H:0:0,
+  SBC_A_L:0:0,
+  SBC_A__HL_:0:0,
+  SBC_A_A:0:0,
+  AND_A_B:0:0,
+  AND_A_C:0:0,
+  AND_A_D:0:0,
+  AND_A_E:0:0,
+  AND_A_H:0:0,
+  AND_A_L:0:0,
+  AND_A__HL_:0:0,
+  AND_A_A:0:0,
+  XOR_A_B:0:0,
+  XOR_A_C:0:0,
+  XOR_A_D:0:0,
+  XOR_A_E:0:0,
+  XOR_A_H:0:0,
+  XOR_A_L:0:0,
+  XOR_A__HL_:0:0,
+  XOR_A_A:0:0,
+  OR_A_B:0:0,
+  OR_A_C:0:0,
+  OR_A_D:0:0,
+  OR_A_E:0:0,
+  OR_A_H:0:0,
+  OR_A_L:0:0,
+  OR_A__HL_:0:0,
+  OR_A_A:0:0,
+  CP_A_B:0:0,
+  CP_A_C:0:0,
+  CP_A_D:0:0,
+  CP_A_E:0:0,
+  CP_A_H:0:0,
+  CP_A_L:0:0,
+  CP_A__HL_:0:0,
+  CP_A_A:0:0,
+  RET_NZ:0:0,
+  POP_BC:0:0,
+  JP_NZ_nn:0:0,
+  JP_nn:0:0,
+  CALL_NZ_nn:0:0,
+  PUSH_BC:0:0,
+  ADD_A_n:0:0,
+  RST_0:0:0,
+  RET_Z:0:0,
+  RET:0:0,
+  JP_Z_nn:0:0,
+  CB:0:0,
+  CALL_Z_nn:0:0,
+  CALL_nn:0:0,
+  ADC_A_n:0:0,
+  RST_8:0:0,
+  RET_NC:0:0,
+  POP_DE:0:0,
+  JP_NC_nn:0:0,
+  OUT__n__A:0:0,
+  CALL_NC_nn:0:0,
+  PUSH_DE:0:0,
+  SUB_A_n:0:0,
+  RST_16:0:0,
+  RET_C:0:0,
+  EXX:0:0,
+  JP_C_nn:0:0,
+  IN_A__n_:0:0,
+  CALL_C_nn:0:0,
+  IX:0:0,
+  SBC_A_n:0:0,
+  RST_24:0:0,
+  RET_PO:0:0,
+  POP_HL:0:0,
+  JP_PO_nn:0:0,
+  EX__SP__HL:0:0,
+  CALL_PO_nn:0:0,
+  PUSH_HL:0:0,
+  AND_A_n:0:0,
+  RST_32:0:0,
+  RET_PE:0:0,
+  JP__HL_:0:0,
+  JP_PE_nn:0:0,
+  EX_DE_HL:0:0,
+  CALL_PE_nn:0:0,
+  ED:0:0,
+  XOR_A_n:0:0,
+  RST_40:0:0,
+  RET_NS:0:0,
+  POP_AF:0:0,
+  JP_NS_nn:0:0,
+  DI:0:0,
+  CALL_NS_nn:0:0,
+  PUSH_AF:0:0,
+  OR_A_n:0:0,
+  RST_48:0:0,
+  RET_S:0:0,
+  LD_SP_HL,
+  JP_S_nn:0:0,
+  EI:0:0,
+  CALL_S_nn:0:0,
+  IY:0:0,
+  CP_A_n:0:0,
+  RST_56:0:0,
+
+  IN_B__C_:0:0,       // ED + opcode >=64
+  OUT__C__B:0:0,
+  SBC_HL_BC:0:0,
+  LD__nn__BC:0:0,
+  NEG_A:0:0,
+  RETN:0:0,
+  IM_0:0:0,
+  LD_I_A:0:0,
+  IN_C__C_:0:0,
+  OUT__C__C:0:0,
+  ADC_HL_BC:0:0,
+  LD_BC__nn_:0:0,
+//NEG_A:0:0,
+  RETI:0:0,
+//IM_0:0:0,
+  LD_R_A:0:0,
+  IN_D__C_:0:0,
+  OUT__C__D:0:0,
+  SBC_HL_DE:0:0,
+//NEG_A:0:0,
+//RETN:0:0,
+  IM_1:0:0,
+  IN_E__C_:0:0,
+  OUT__C__E:0:0,
+  LD__nn__DE:0:0,
+  LD_A_I:0:0,
+  ADC_HL_DE:0:0,
+  LD_DE__nn_:0:0,
+//NEG_A:0:0,
+//RETI:0:0,
+  IM_2:0:0,
+  LD_A_R:0:0,
+  IN_H__C_:0:0,
+  OUT__C__H:0:0,
+  SBC_HL_HL:0:0,
+//LD__nn__HL:0:0,
+//NEG_A:0:0,
+//RETN:0:0,
+//IM_0:0:0,
+  RRD:0:0,
+  IN_L__C_:0:0,
+  OUT__C__L:0:0,
+  ADC_HL_HL:0:0,
+//LD_HL__nn_:0:0,
+//NEG_A:0:0,
+//RETI:0:0,
+//IM_0:0:0,
+  RLD:0:0,
+  IN__C_:0:0,
+  OUT__C__0:0:0,
+  SBC_HL_SP:0:0,
+  LD__nn__SP:0:0,
+//NEG_A:0:0,
+//RETN:0:0,
+//IM_1:0:0,
+//NOP:0:0,
+  IN_A__C_:0:0,
+  OUT__C__A:0:0,
+  ADC_HL_SP:0:0,
+  LD_SP__nn_:0:0,
+//NEG_A:0:0,
+//RETI:0:0,
+//IM_2:0:0,
+
+// ED + opcode >=160
+
+  LDI:0:0,
+  CPI:0:0,
+  INI:0:0,
+  OUTI:0:0,
+//NOP:0:0,
+//NOP:0:0,
+//NOP:0:0,
+//NOP:0:0,
+  LDD:0:0,
+  CPD:0:0,
+  IND:0:0,
+  OUTD:0:0,
+//NOP:0:0,
+//NOP:0:0,
+//NOP:0:0,
+//NOP:0:0,
+  LDIR:0:0,
+  CPIR:0:0,
+  INIR:0:0,
+  OTIR:0:0,
+//NOP:0:0,
+//NOP:0:0,
+//NOP:0:0,
+//NOP:0:0,
+  LDDR:0:0,
+  CPDR:0:0,
+  INDR:0:0,
+  OTDR:0:0,         //opcode 187
+  
+  in:1:0,
+  out:0:2;
+  
+
+pointer opcode[
+  NOP,
+  LD_BC_nn,
+  LD__BC__a,
+  INC_BC,
+  INC_B,
+  DEC_B,
+  LD_B_n,
+  RLC_A,
+  EX_AF_AF,
+  ADD_HL_BC,
+  LD_A__BC_,
+  DEC_BC,
+  INC_C,
+  DEC_C,
+  LD_C_n,
+  RRC_A,
+  DJNZ_d,
+  LD_DE_nn,
+  LD__DE_A,
+  INC_DE,
+  INC_D,
+  DEC_D,
+  LD_D_n,
+  RL_A,
+  JR_d,
+  ADD_HL_DE,
+  LD_A__DE_,
+  DEC_DE,
+  INC_E,
+  DEC_E,
+  LD_E_n,
+  RR_A,
+  JRNZ_d,
+  LD_HL_nn,
+  LD__nn__HL,
+  INC_HL,
+  INC_H,
+  DEC_H,
+  LD_H_n,
+  DA_A,
+  JRZ_d,
+  ADD_HL_HL,
+  LD_HL__nn_,
+  DEC_HL,
+  INC_L,
+  DEC_L,
+  LD_L_n,
+  CPL,
+  JRNC_d,
+  LD_SP_nn,
+  LD__nn__A,
+  INC_SP,
+  INC__HL_,
+  DEC__HL_,
+  LD__HL__n,
+  SCF,
+  JRC_d,
+  ADD_HL_SP,
+  LD_A__nn_,
+  DEC_SP,
+  INC_A,
+  DEC_A,
+  LD_A_n,
+  CCF,
+  NOP,    //  LD_B_B,
+  LD_B_C,
+  LD_B_D,
+  LD_B_E,
+  LD_B_H,
+  LD_B_L,
+  LD_B__HL_,
+  LD_B_A,
+  LD_C_B,
+  NOP,    //LD_C_C,
+  LD_C_D,
+  LD_C_E,
+  LD_C_H,
+  LD_C_L,
+  LD_C__HL_,
+  LD_C_A,
+  LD_D_B,
+  LD_D_C,
+  NOP,    //LD_D_D,
+  LD_D_E,
+  LD_D_H,
+  LD_D_L,
+  LD_D__HL_,
+  LD_D_A,
+  LD_E_B,
+  LD_E_C,
+  LD_E_D,
+  NOP,    //LD_E_E,
+  LD_E_H,
+  LD_E_L,
+  LD_E__HL_,
+  LD_E_A,
+  LD_H_B,
+  LD_H_C,
+  LD_H_D,
+  LD_H_E,
+  NOP,    //LD_H_H,
+  LD_H_L,
+  LD_H__HL_,
+  LD_H_A,
+  LD_L_B,
+  LD_L_C,
+  LD_L_D,
+  LD_L_E,
+  LD_L_H,
+  NOP,    //LD_L_L,
+  LD_L__HL_,
+  LD_L_A,
+  LD__HL__B,
+  LD__HL__C,
+  LD__HL__D,
+  LD__HL__E,
+  LD__HL__H,
+  LD__HL__L,
+  HALT,
+  LD__HL__A,
+  LD_A_B,
+  LD_A_C,
+  LD_A_D,
+  LD_A_E,
+  LD_A_H,
+  LD_A_L,
+  LD_A__HL_,
+  NOP,    //LD_A_A,
+  ADD_A_B,
+  ADD_A_C,
+  ADD_A_D,
+  ADD_A_E,
+  ADD_A_H,
+  ADD_A_L,
+  ADD_A__HL_,
+  ADD_A_A,
+  ADC_A_B,
+  ADC_A_C,
+  ADC_A_D,
+  ADC_A_E,
+  ADC_A_H,
+  ADC_A_L,
+  ADC_A__HL_,
+  ADC_A_A,
+  SUB_A_B,
+  SUB_A_C,
+  SUB_A_D,
+  SUB_A_E,
+  SUB_A_H,
+  SUB_A_L,
+  SUB_A__HL_,
+  SUB_A_A,
+  SBC_A_B,
+  SBC_A_C,
+  SBC_A_D,
+  SBC_A_E,
+  SBC_A_H,
+  SBC_A_L,
+  SBC_A__HL_,
+  SBC_A_A,
+  AND_A_B,
+  AND_A_C,
+  AND_A_D,
+  AND_A_E,
+  AND_A_H,
+  AND_A_L,
+  AND_A__HL_,
+  AND_A_A,
+  XOR_A_B,
+  XOR_A_C,
+  XOR_A_D,
+  XOR_A_E,
+  XOR_A_H,
+  XOR_A_L,
+  XOR_A__HL_,
+  XOR_A_A,
+  OR_A_B,
+  OR_A_C,
+  OR_A_D,
+  OR_A_E,
+  OR_A_H,
+  OR_A_L,
+  OR_A__HL_,
+  OR_A_A,
+  CP_A_B,
+  CP_A_C,
+  CP_A_D,
+  CP_A_E,
+  CP_A_H,
+  CP_A_L,
+  CP_A__HL_,
+  CP_A_A,
+  RET_NZ,
+  POP_BC,
+  JP_NZ_nn,
+  JP_nn,
+  CALL_NZ_nn,
+  PUSH_BC,
+  ADD_A_n,
+  RST_0,
+  RET_Z,
+  RET,
+  JP_Z_nn,
+  CB,
+  CALL_Z_nn,
+  CALL_nn,
+  ADC_A_n,
+  RST_8,
+  RET_NC,
+  POP_DE,
+  JP_NC_nn,
+  OUT__n__A,
+  CALL_NC_nn,
+  PUSH_DE,
+  SUB_A_n,
+  RST_16,
+  RET_C,
+  EXX,
+  JP_C_nn,
+  IN_A__n_,
+  CALL_C_nn,
+  IX,
+  SBC_A_n,
+  RST_24,
+  RET_PO,
+  POP_HL,
+  JP_PO_nn,
+  EX__SP__HL,
+  CALL_PO_nn,
+  PUSH_HL,
+  AND_A_n,
+  RST_32,
+  RET_PE,
+  JP__HL_,
+  JP_PE_nn,
+  EX_DE_HL,
+  CALL_PE_nn,
+  ED,
+  XOR_A_n,
+  RST_40,
+  RET_NS,
+  POP_AF,
+  JP_NS_nn,
+  DI,
+  CALL_NS_nn,
+  PUSH_AF,
+  OR_A_n,
+  RST_48,
+  RET_S,
+  LD_SP_HL,
+  JP_S_nn,
+  EI,
+  CALL_S_nn,
+  IY,
+  CP_A_n,
+  RST_56
+];
+
+pointer op1de[
+  IN_B__C_,       // ED + opcode =64
+  OUT__C__B,
+  SBC_HL_BC,
+  LD__nn__BC,
+  NEG_A,
+  RETN,
+  IM_0,
+  LD_I_A,
+  IN_C__C_,
+  OUT__C__C,
+  ADC_HL_BC,
+  LD_BC__nn_,
+    NEG_A,
+  RETI,
+    IM_0,
+  LD_R_A,
+  IN_D__C_,
+  OUT__C__D,
+  SBC_HL_DE,
+  LD__nn__DE,
+    NEG_A,
+    RETN,
+  IM_1,
+  LD_A_I,
+  IN_E__C_,
+  OUT__C__E,
+  ADC_HL_DE,
+  LD_DE__nn_,
+    NEG_A,
+    RETI,
+  IM_2,
+  LD_A_R,
+  IN_H__C_,
+  OUT__C__H,
+  SBC_HL_HL,
+    LD__nn__HL,
+    NEG_A,
+    RETN,
+    IM_0,
+  RRD,
+  IN_L__C_,
+  OUT__C__L,
+  ADC_HL_HL,
+    LD_HL__nn_,
+    NEG_A,
+    RETI,
+    IM_0,
+    RLD,
+  IN__C_,
+  OUT__C__0,
+  SBC_HL_SP,
+  LD__nn__SP,
+    NEG_A,
+    RETN,
+    IM_1,
+    NOP,
+  IN_A__C_,
+  OUT__C__A,
+  ADC_HL_SP,
+  LD_SP__nn_,
+    NEG_A,
+    RETI,
+    IM_2        // ED + opcode =126
+];
+
+pointer op2de[
+  LDI,          // ED + opcode =160
+  CPI,
+  INI,
+  OUTI,
+    NOP,
+    NOP,
+    NOP,
+    NOP,
+  LDD,
+  CPD,
+  IND,
+  OUTD,
+    NOP,
+    NOP,
+    NOP,
+    NOP,
+  LDIR,
+  CPIR,
+  INIR,
+  OTIR,
+    NOP,
+    NOP,
+    NOP,
+    NOP,
+  LDDR,
+  CPDR,
+  INDR,
+  OTDR         //opcode 187
+];
+
+pointer memory,call,pin,pout;
+
+uint16 _IX,_IY,_SP,_PC,_IT;
+
+uint8
+  _A,_B,_D,_H,
+  _F,_C,_E,_L,
+  __A,__B,__D,__H,
+  __F,__C,__E,__L,
+  _I,_R,
+  
+//  _FS,_FZ,_F5,_FH,_F3,_FP,_FN,_FC,
+  
+  _IFF1,_IFF2,_IM;
+
+uint8 halted;
+
+int64 contador=1;
+
+
+function get16 (uint16 h;uint8 l) {
+  h:=shl (h&0xff,8)|l&0xff;
+}
+
+function mem8 (uint16 d;) {
+  d:=memory[d&0xffff,uint8];
+}
+
+function memi8 (int16 d;) {
+  d:=memory[d&0xffff,int8];
+}
+
+function setmem8 (;uint16 d,uint8 m) {
+  memory[d&0xffff,uint8]:=m;
+}
+
+function mem16 (uint16 d;) {
+  d:=memory[d&0xffff,uint8]|shl (memory[(d+1)&0xffff,uint8],8);
+}
+
+function setmem16 (;uint16 d,uint16 m) {
+  memory[d&0xffff,uint8]:=m&0xff;
+  memory[(d+1)&0xffff,uint8]:=shr (m,8)&0xff;
+}
+
+function high (uint16 x;) {
+  x:=shr (x,8)&0xff;
+}
+
+function low (uint16 x;) {
+  x:=x&0xff;
+}
+
+function asigr (;int8 i) {
+_R:=(_R&0x80)|(i&0x7f);
+}
+
+function addr (;int8 i) {
+_R:=(_R&0x80)|((_R+i)&0x7f);
+}
+
+function incpc (;) {
+  _PC:=(_PC+1)&0xffff;
+}
+
+function addpc (;uint16 x) {
+  _PC:=(_PC+x)&0xffff;
+}
+
+function parity (uint8  b;) {
+  b:=xor (b,shr (b,4));
+  b:=xor (b,shr (b,2));
+  b:=xor (b,shr (b,1));
+  b:=(~b)&1;
+}
+
+function in (uint16 p;) {
+  p:=pin (p);
+}
+
+function inBC (uint16 p;) {
+  p:=pin (get16 (_B,_C));
+  _F:=_F&0x1|p&0xa8;
+  if (p=0) _F:=_F|0x40;
+  if (parity (p)<>0) _F:=_F|0x04;
+
+}
+
+function out (;uint8 p,uint8 v) {
+  pout (p,v);
+}
+
+function step (;) {
+  uint8 op=mem8 (_PC);
+
+/*
+if (contador>=1000000) {
+if (contador>=1010000) contador:=0;
+else {
+string.write (system.out,string.decimal (contador));
+
+string.write (system.out," PC=");
+string.write (system.out,string.decimal (_PC));
+string.write (system.out," o=");
+string.write (system.out,string.decimal (memory[_PC,uint8]));
+string.write (system.out," p=");
+string.write (system.out,string.decimal (memory[_PC+1,uint8]));
+string.write (system.out," q=");
+string.write (system.out,string.decimal (memory[_PC+2,uint8]));
+
+//string.write (system.out," AF=");
+//string.write (system.out,string.decimal ((shl (_A,8)|_F)));
+string.write (system.out," A=");
+string.write (system.out,string.decimal (_A));
+string.write (system.out," BC=");
+string.write (system.out,string.decimal (shl (_B,8)|_C));
+string.write (system.out," DE=");
+string.write (system.out,string.decimal (shl (_D,8)|_E));
+string.write (system.out," HL=");
+string.write (system.out,string.decimal (shl (_H,8)|_L));
+
+string.write (system.out," SP=");
+string.write (system.out,string.decimal (_SP));
+string.write (system.out,"\n");
+/*
+string.write (system.out," (SP)=");
+string.write (system.out,string.decimal (mem16 (_SP)));
+string.write (system.out,"\n");
+
+
+}
+}
+if (contador<>0) contador:=contador+1;
+*/
+  if (halted<>0) break step;
+  incpc ();
+  addr (1);
+  call:=opcode[shl (op,3),pointer];
+  call ();
+}
+
+function getCBdata (uint8 o;) {
+  if (o>4) {
+    if (o=5) o:=_L;
+    else if (o=7) o:=_A;
+    else o:=mem8 (get16 (_H,_L));
+  } else if (o<4) {
+    if (o=3) o:=_E;
+    else if (o=2) o:=_D;
+    else if (o=1) o:=_C;
+    else o:=_B;
+  } else o:=_H;
+}
+
+function setCBdata (;uint8 o,uint8 v) {
+  if (o>4) {
+    if (o=5) _L:=v;
+    else if (o=7) _A:=v;
+    else setmem8 (get16 (_H,_L),v);
+  } else if (o<4) {
+    if (o=3) _E:=v;
+    else if (o=2) _D:=v;
+    else if (o=1) _C:=v;
+    else _B:=v;
+  } else _H:=v;
+}
+
+function addsubA (uint16 r;) {
+  _F:=(r&0x80)|(r&0x20)|(r&0x8);
+  if (r&0x100<>0) _F:=_F|0x1;
+  r:=r&0xff;
+  if (r=0) _F:=_F|0x40;
+}
+
+function addA (;uint8 v) {
+  uint16 r=_A+v;
+  
+  r:=addsubA (r);
+  if (((_A&0xf)+(v&0xf))&0x10<>0) _F:=_F|0x10;
+  if (xor (_A,~v)&xor (_A,r)&0x80<>0) _F:=_F|0x4;
+  _A:=r;
+}
+
+function subA (;uint8 v) {
+  uint16 r=_A-v;
+  
+  r:=addsubA (r);
+  if (((_A&0xf)-(v&0xf))&0x10<>0) _F:=_F|0x10;
+  if (xor (_A,v)&xor (_A,r)&0x80<>0) _F:=_F|0x4;
+  _F:=_F|0x2;
+  _A:=r;
+}
+
+function adcA (;uint8 v) {
+  uint8 c=_F&0x1;
+  uint16 r=_A+v+c;
+  
+  _F:=(r&0x80)|(r&0x20)|(r&0x8);
+  if (r&0x100<>0) _F:=_F|0x1;
+  r:=r&0xff;
+  if (r=0) _F:=_F|0x40;
+  if (((_A&0xf)+(v&0xf)+c)&0x10<>0) _F:=_F|0x10;
+  if (xor (_A,~v)&xor (_A,r)&0x80<>0) _F:=_F|0x4;
+  _A:=r;
+}
+
+function sbcA (;uint8 v) {
+  uint8 c=_F&0x1;
+  uint16 r=_A-v-c;
+  
+  _F:=(r&0x80)|(r&0x20)|(r&0x8)|0x2;
+  if (r&0x100<>0) _F:=_F|0x1;
+  r:=r&0xff;
+  if (r=0) _F:=_F|0x40;
+  if (((_A&0xf)-(v&0xf)-c)&0x10<>0) _F:=_F|0x10;
+  if (xor (_A,v)&xor (_A,r)&0x80<>0) _F:=_F|0x4;
+  _A:=r;
+}
+
+function add16 (uint16 h;uint16 b) {
+  uint32 r=h+b;
+
+  _F:=_F&0xc4;
+  if (r&0x10000<>0) _F:=_F|0x1;
+  if (r&0x2000<>0) _F:=_F|0x20;
+  if (r&0x800<>0) _F:=_F|0x8;
+  if (((h&0xfff)+(b&0xfff))&0x1000<>0) _F:=_F|0x10;
+  h:=r&0xffff;
+}
+
+function adc16 (uint16 h;uint16 b) {
+  uint8 c=_F&0x1;
+  uint32 r=h+b+c;
+  
+  _F:=shr ((r&0x8000)|(r&0x2000)|(r&0x800),8);
+  if (((h&0xfff)+(b&0xfff)+c)&0x1000<>0) _F:=_F|0x10;
+  if ((xor (h,~b)&xor (h,r))&0x8000<>0) _F:=_F|0x4;
+  if (r&0x10000<>0) _F:=_F|0x1;
+  r:=r&0xffff;
+  if (r=0) _F:=_F|0x40;
+  h:=r;
+}
+
+function sbc16 (uint16 h;uint16 b) {
+  uint8 c=_F&0x1;
+  uint32 r=h-b-c;
+  
+  _F:=shr ((r&0x8000)|(r&0x2000)|(r&0x800),8)|0x2;
+  if (((h&0xfff)-(b&0xfff)-c)&0x1000<>0) _F:=_F|0x10;
+  if ((xor (h,b)&xor (h,r))&0x8000<>0) _F:=_F|0x4;
+  if (r&0x10000<>0) _F:=_F|0x1;
+  r:=r&0xffff;
+  if (r=0) _F:=_F|0x40;
+  h:=r;
+}
+
+function orA (;) {
+  _F:=_A&0xa8;
+  if (_A=0) _F:=_F|0x40;
+  if (parity (_A)<>0) _F:=_F|0x4;
+}
+
+function andA (;) {
+  orA ();
+  _F:=_F|0x10;
+}
+
+function arithmeticA (uint8 v;) {
+  uint16 r=_A-v;
+  
+  _F:=(r&0x80)|(v&0x28)|0x2;
+  if (r&0x100<>0) _F:=_F|0x1;
+  r:=r&0xff;
+  if (r=0) _F:=_F|0x40;
+  if (((_A&0xf)-(v&0xf))&0x10<>0) _F:=_F|0x10;
+  if ((xor (_A,v)&xor (_A,r))&0x80<>0) _F:=_F|0x4;
+  v:=r;
+}
+
+function inc8 (uint8 r;) {
+  _F:=_F&0x1;
+  if (r=0x7f) _F:=_F|0x4;
+  _F:=_F|((r&0xf)+1)&0x10;
+  r:=(r+1)&0xff;
+  _F:=_F|(r&0x80);
+  if (r=0) _F:=_F|0x40;
+  _F:=_F|(r&0x20);
+  _F:=_F|(r&0x8);
+}
+
+function dec8 (uint8 r;) {
+  _F:=_F&0x1|0x2;
+  if (r=0x80) _F:=_F|0x4;
+  _F:=_F|((r&0xf)-1)&0x10;
+  r:=(r-1)&0xff;
+  _F:=_F|(r&0x80);
+  if (r=0) _F:=_F|0x40;
+  _F:=_F|(r&0x20);
+  _F:=_F|(r&0x8);
+}
+
+function pop (uint16 r;) {
+  r:=mem16 (_SP);
+  _SP:=_SP+2;
+}
+
+function push (;uint16 r) {
+  _SP:=_SP-2;
+  setmem16 (_SP,r);
+}
+
+function interrupt_nmi (;) {
+  halted:=0;
+  _IFF2:=_IFF1;
+  _IFF1:=0;
+  push (_PC);
+  _PC:=0x66;
+}
+
+function interrupt_IFF (;) {
+  halted:=0;
+  _IFF1:=0;
+  _IFF2:=0;
+  addr (1);
+}
+
+function interrupt_M0 (;uint8 v) {
+  if (_IFF1=0) break interrupt_M0;
+  interrupt_IFF ();
+  call:=opcode[shl (v,3),pointer];
+  call ();
+}
+
+function interrupt_M1 (;uint8 v) {
+  if (_IFF1=0) break interrupt_M1;
+  interrupt_IFF ();
+  push (_PC);
+  _PC:=0x38;
+}
+
+function interrupt_M2 (;uint8 v) {
+  if (_IFF1=0) break interrupt_M2;
+  interrupt_IFF ();
+  push (_PC);
+  _PC:=mem16 (get16 (_I,v));
+}
+
+function interrupt (;uint8 v) {
+  if (_IM=0) interrupt_M0 (v);
+  else if (_IM=1) interrupt_M1 (v);
+  else interrupt_M2 (v);
+}
+
+function rlc (uint8 v;) {
+  _F:=v&0x80;
+  v:=shl (v,1)&0xff;
+  if (_F&0x80<>0) {
+    _F:=0x1;
+    v:=v|0x1;
+  }// else _F:=0;
+  _F:=_F|(v&0x80)|(v&0x20)|(v&0x8);
+  if (v=0) _F:=_F|0x40;
+  if (parity (v)<>0) _F:=_F|0x4;
+}
+
+function rrc (uint8 v;) {
+  _F:=v&0x1;
+  v:=shr (v,1)&0xff;
+  if (_F&0x1<>0) {
+    _F:=0x1;
+    v:=v|0x80;
+  }// else _F:=0;
+  _F:=_F|(v&0x80)|(v&0x20)|(v&0x8);
+  if (v=0) _F:=_F|0x40;
+  if (parity (v)<>0) _F:=_F|0x4;
+}
+
+function rl (uint8 v;) {
+  uint8 c=v&0x80;
+
+  v:=shl (v,1)&0xff;
+  if (_F&0x1<>0) v:=v|0x1;
+  _F:=(v&0x80)|(v&0x20)|(v&0x8);
+  if (v=0) _F:=_F|0x40;
+  if (parity (v)<>0) _F:=_F|0x4;
+  if (c<>0) _F:=_F|0x1;
+}
+
+function rr (uint8 v;) {
+  uint8 c=v&0x1;
+
+  v:=shr (v,1)&0xff;
+  if (_F&0x1<>0) v:=v|0x80;
+  _F:=(v&0x80)|(v&0x20)|(v&0x8);
+  if (v=0) _F:=_F|0x40;
+  if (parity (v)<>0) _F:=_F|0x4;
+  _F:=_F|c;
+}
+
+function sla (uint8 v;) {
+  _F:=v&0x80;
+  v:=shl (v,1)&0xff;
+  if (_F&0x80<>0) _F:=0x1;
+  _F:=_F|(v&0x80)|(v&0x20)|(v&0x8);
+  if (v=0) _F:=_F|0x40;
+  if (parity (v)<>0) _F:=_F|0x4;
+}
+
+function sll (uint8 v;) {
+  _F:=v&0x80;
+  v:=shl (v,1)&0xff|0x1;
+  if (_F&0x80<>0) _F:=0x1;
+  _F:=_F|(v&0x80)|(v&0x20)|(v&0x8);
+  if (v=0) _F:=_F|0x40;
+  if (parity (v)<>0) _F:=_F|0x4;
+}
+
+function sra (uint8 v;) {
+  _F:=v&0x1;
+  v:=shr (v,1)|v&0x80;
+  _F:=_F|(v&0x80)|(v&0x20)|(v&0x8);
+  if (v=0) _F:=_F|0x40;
+  if (parity (v)<>0) _F:=_F|0x4;
+}
+
+function srl (uint8 v;) {
+  _F:=v&0x1;
+  v:=shr (v,1);
+  _F:=_F|(v&0x80)|(v&0x20)|(v&0x8);
+  if (v=0) _F:=_F|0x40;
+  if (parity (v)<>0) _F:=_F|0x4;
+}
+
+function rot (uint8 d;uint8 p) {
+  if (p=0) d:=rlc (d);
+  else if (p=1) d:=rrc (d);
+  else if (p=2) d:=rl (d);
+  else if (p=3) d:=rr (d);
+  else if (p=4) d:=sla (d);
+  else if (p=5) d:=sra (d);
+  else if (p=6) d:=sll (d);
+  else d:=srl (d);
+}
+
+function prefixcb (;uint8 o) {
+  uint8
+    p=shr (o,3)&0x7,
+    r=o&0x7,
+    d=getCBdata (o&0x7);
+
+  o:=shr (o,6)&0x3;
+  if (o=0) d:=rot (d,p);
+  else if (o=1) {
+    _F:=_F&0x1|0x10|d&0x28;
+    d:=d&shl (1,p);
+    _F:=_F|d&0x80;
+    if (d=0) _F:=_F|0x44;
+    if (r=6) _F:=_F&~0x28;
+  } else if (o=2) d:=d&~shl (1,p);
+  else d:=d|shl (1,p);
+  if (o<>1) setCBdata (r,d);
+
+}
+
+function prefix2cb (;uint8 o,uint16 a) {
+  uint8
+    p=shr (o,3)&0x7,
+    r=o&0x7,
+    d=mem8 (a);
+
+  o:=shr (o,6)&0x3;
+  if (o=0) d:=rot (d,p);
+  else if (o=1) {
+    d:=d&shl (1,p);
+    _F:=_F&0x1|0x10|high (a)&0x28|d&0x80;
+    if (d=0) _F:=_F|0x44;
+  } else if (o=2) d:=d&~shl (1,p);
+  else d:=d|shl (1,p);
+  if (o<>1 and r<>6) setCBdata (r,d);
+  if (o<>1) setmem8 (a,d);
+}
+
+function ldi (;int8 i) {
+  uint16
+    d=get16 (_D,_E),
+    h=get16 (_H,_L),
+    v=mem8 (h);
+  
+  setmem8 (d,v);
+  d:=d+i;
+  h:=h+i;
+  _D:=high (d);
+  _E:=low (d);
+  _H:=high (h);
+  _L:=low (h);
+  d:=get16 (_B,_C);
+  d:=d-1;
+  _B:=high (d);
+  _C:=low (d);
+  _F:=_F&~0x16;
+  if (_B|_C<>0) _F:=_F|0x4;
+  else _F:=_F&~0x4;
+  if ((v+_A)&0x8<>0) _F:=_F|0x8;
+  else _F:=_F&~0x8;
+  if ((v+_A)&0x2<>0) _F:=_F|0x20;
+  else _F:=_F&~0x20;
+//if (_B|_C<>0) _F:=_F&~0x12|0x4;
+//else _F:=_F&~0x16;
+}
+
+function cpi (;int8 i,uint8 p) {
+  uint16 h=get16 (_H,_L);
+  uint8
+    c=_F&0x1,
+    v=arithmeticA (mem8 (h));
+
+  h:=h+i;
+  _H:=high (h);
+  _L:=low (h);
+  h:=get16 (_B,_C);
+  h:=h-1;
+  _B:=high (h);
+  _C:=low (h);
+  if (_F&0x10<>0) v:=v-1;
+  if (c<>0) _F:=_F|0x1;
+  else _F:=_F&0xfe;
+  if (v&0x8<>0) _F:=_F|0x8;
+  else _F:=_F&~0x8;
+  if (v&0x2<>0) _F:=_F|0x20;
+  else _F:=_F&~0x20;
+  if (_B|_C<>0) {
+    _F:=_F|0x4;
+    if (p<>0 and _F&0x40=0) addpc (-2);
+  } else _F:=_F&~0x4;
+}
+
+
+function NOP (;) {
+}
+
+function LD_BC_nn (;) {
+  _C:=mem8 (_PC);
+  incpc ();
+  _B:=mem8 (_PC);
+  incpc ();
+}
+
+function LD__BC__a (;) {
+  setmem8 (get16 (_B,_C),_A);
+}
+
+function INC_BC (;) {
+  uint16 x=get16 (_B,_C)+1;
+  
+  _B:=high (x);
+  _C:=low (x);
+}
+
+function INC_B (;) {
+  _B:=inc8 (_B);
+}
+
+function DEC_B (;) {
+  _B:=dec8 (_B);
+}
+
+function LD_B_n (;) {
+  _B:=mem8(_PC);
+  incpc ();
+}
+
+function RLC_A (;) {
+  _F:=_F&~0x3b;
+  if (_A&0x80<>0) {
+    _F:=_F|0x1;
+    _A:=shl (_A,1)|0x1;
+  } else _A:=shl (_A,1);
+  _F:=_F|(_A&0x20)|(_A&0x8);
+}
+
+function EX_AF_AF (;) {
+  uint8 x;
+  
+  x:=_A;_A:=__A;__A:=x;
+  x:=_F;_F:=__F; __F:=x;
+}
+
+function ADD_HL_BC (;) {
+  uint16 h=add16 (get16 (_H,_L),get16 (_B,_C));
+  
+  _H:=high (h);
+  _L:=low (h);
+}
+
+function LD_A__BC_ (;) {
+  _A:=mem8 (get16 (_B,_C));
+}
+
+function DEC_BC (;) {
+  uint16 x=get16 (_B,_C)-1;
+  
+  _B:=high (x);
+  _C:=low (x);
+}
+
+function INC_C (;) {
+  _C:=inc8 (_C);
+}
+
+function DEC_C (;) {
+  _C:=dec8 (_C);
+}
+
+function LD_C_n (;) {
+  _C:=mem8 (_PC);
+  incpc ();
+}
+
+function RRC_A (;) {
+  _F:=_F&~0x3b;
+  if (_A&0x1<>0) {
+    _F:=_F|0x1;
+    _A:=shr (_A,1)|0x80;
+  } else _A:=shr (_A,1);
+  _F:=_F|(_A&0x28);
+}
+
+function DJNZ_d (;) {
+  _B:=_B-1;
+  if (_B<>0) addpc (memi8 (_PC));
+//  else incpc ();
+  incpc ();
+}
+
+function LD_DE_nn (;) {
+  _E:=mem8 (_PC);
+  incpc ();
+  _D:=mem8 (_PC);
+  incpc ();
+}
+
+function LD__DE_A (;) {
+  setmem8 (get16 (_D,_E),_A);
+}
+
+function INC_DE (;) {
+  uint16 x=get16 (_D,_E)+1;
+  
+  _D:=high (x);
+  _E:=low (x);
+}
+
+function INC_D (;) {
+  _D:=inc8 (_D);
+}
+
+function DEC_D (;) {
+  _D:=dec8 (_D);
+}
+
+function LD_D_n (;) {
+  _D:=mem8 (_PC);
+  incpc ();
+}
+
+function RL_A (;) {
+  uint8 c=_A&0x80;
+  
+  if (_F&0x1<>0) {
+    _A:=shl (_A,1)|0x1;
+  } else _A:=shl (_A,1);
+  _F:=_F&~0x1b;
+  if (c<>0) _F:=_F|0x1;
+  _F:=_F|(_A&0x20)|(_A&0x8);
+}
+
+function JR_d (;) {
+  addpc (memi8 (_PC)+1);
+}
+
+function ADD_HL_DE (;) {
+  uint16 h=add16 (get16 (_H,_L),get16 (_D,_E));
+  
+  _H:=high (h);
+  _L:=low (h);
+}
+
+function LD_A__DE_ (;) {
+  _A:=mem8 (get16 (_D,_E));
+}
+
+function DEC_DE (;) {
+  uint16 x=get16 (_D,_E)-1;
+  
+  _D:=high (x);
+  _E:=low (x);
+}
+
+function INC_E (;) {
+  _E:=inc8 (_E);
+}
+
+function DEC_E (;) {
+  _E:=dec8 (_E);
+}
+
+function LD_E_n (;) {
+  _E:=mem8 (_PC);
+  incpc ();
+}
+
+function RR_A (;) {
+  uint8 c=_A&0x1;
+  
+  if (_F&0x1<>0) {
+    _A:=shr (_A,1)|0x80;
+  } else _A:=shr (_A,1);
+  _F:=_F&~0x1b;
+  if (c<>0) _F:=_F|0x1;
+  _F:=_F|(_A&0x20)|(_A&0x8);
+}
+
+function JRNZ_d (;) {
+  
+  if (_F&0x40=0) _PC:=_PC+memi8 (_PC);
+  incpc ();
+}
+
+function LD_HL_nn (;) {
+  _L:=mem8 (_PC);
+  incpc ();
+  _H:=mem8 (_PC);
+  incpc ();
+}
+
+function LD__nn__HL (;) {
+  setmem16 (mem16 (_PC),get16 (_H,_L));
+  addpc (2);
+}
+
+function INC_HL (;) {
+  uint16 x=get16 (_H,_L)+1;
+  
+  _H:=high (x);
+  _L:=low (x);
+}
+
+function INC_H (;) {
+  _H:=inc8 (_H);
+}
+
+function DEC_H (;) {
+  _H:=dec8 (_H);
+}
+
+function LD_H_n (;) {
+  _H:=mem8 (_PC);
+  incpc ();
+}
+
+function DA_A (;) {
+  uint8 i=0,c=_F&0x1;
+  
+  if (_F&0x10<>0 or _A&0xf>9) i:=0x6;
+  if (c<>0 or _A>0x99) {
+    i:=i|0x60;
+    _F:=_F|0x1;
+  }
+  if (_F&0x2<>0) {
+    if (_F&0x10<>0 and _A&0xf<0x6) _F:=_F|0x10;
+    else _F:=_F&~0x10;
+    _A:=_A-i;
+  } else {
+    if (_A&0xf>9) _F:=_F|0x10;
+    else _F:=_F&~0x10;
+    _A:=_A+i;
+  }
+  if (parity (_A)<>0) _F:=_F|0x4;
+  else _F:=_F&~0x4;
+  _F:=(_F&~0xe8)|_A&0xa8;
+  if (_A=0) _F:=_F|0x40;
+}
+
+function JRZ_d (;) {  
+  if (_F&0x40<>0) addpc (memi8 (_PC));
+  incpc ();
+}
+
+function ADD_HL_HL (;) {
+  uint16 h=add16 (get16 (_H,_L),get16 (_H,_L));
+  
+  _H:=high (h);
+  _L:=low (h);
+}
+
+function LD_HL__nn_ (;) {
+  uint16 a=mem16 (_PC);
+  
+  addpc (2);
+  _L:=mem8 (a);
+  _H:=mem8 (a+1);
+}
+
+function DEC_HL (;) {
+  uint16 x=get16 (_H,_L)-1;
+  
+  _H:=high (x);
+  _L:=low (x);
+}
+
+function INC_L (;) {
+  _L:=inc8 (_L);
+}
+
+function DEC_L (;) {
+  _L:=dec8 (_L);
+}
+
+function LD_L_n (;) {
+  _L:=mem8 (_PC);
+  incpc ();
+}
+
+function CPL (;) {
+  _A:=~_A;
+  _F:=(_F&~0x28)|(_A&0x28)|0x12;
+}
+
+function JRNC_d (;) {
+  if (_F&0x1=0) addpc (memi8 (_PC));
+  incpc ();
+}
+
+function LD_SP_nn (;) {
+  _SP:=mem16 (_PC);
+  addpc (2);
+}
+
+function LD__nn__A (;) {
+  setmem8 (mem16 (_PC),_A);
+  addpc (2);
+}
+
+function INC_SP (;) {
+  _SP:=_SP+1;
+}
+
+function INC__HL_ (;) {
+  uint16 a=get16 (_H,_L);
+  
+  setmem8 (a,inc8 (mem8 (a)));
+}
+
+function DEC__HL_ (;) {
+  uint16 a=get16 (_H,_L);
+  
+  setmem8 (a,dec8 (mem8 (a)));
+}
+
+function LD__HL__n (;) {
+  uint16 a=;
+  
+  setmem8 (get16 (_H,_L),mem8 (_PC));
+  incpc ();
+}
+
+function SCF (;) {
+  _F:=(_F&~0x3a)|0x1|(_A&0x28);  
+}
+
+function JRC_d (;) {
+  if (_F&0x1<>0) addpc (memi8 (_PC));
+  incpc ();
+}
+
+function ADD_HL_SP (;) {
+  uint16 h=add16 (get16 (_H,_L),_SP);
+  
+  _H:=high (h);
+  _L:=low (h);
+}
+
+function LD_A__nn_ (;) {
+  _A:=mem8 (mem16 (_PC));
+  addpc (2);
+}
+
+function DEC_SP (;) {
+  _SP:=_SP-1;
+}
+
+function INC_A (;) {
+  _A:=inc8 (_A);
+}
+
+function DEC_A (;) {
+  _A:=dec8 (_A);
+}
+
+function LD_A_n (;) {
+  _A:=mem8 (_PC);
+  incpc ();
+}
+
+function CCF (;) {
+  if (_F&0x1<>0) _F:=_F&~0x3b|(_A&0x28)|0x10;
+  else _F:=_F&~0x3b|(_A&0x28)|0x1;
+}
+
+//function LD_B_B (;) {}    //NOP
+
+function LD_B_C (;) {
+  _B:=_C;
+}
+
+function LD_B_D (;) {
+  _B:=_D;
+}
+
+function LD_B_E (;) {
+  _B:=_E;
+}
+
+function LD_B_H (;) {
+  _B:=_H;
+}
+
+function LD_B_L (;) {
+  _B:=_L;
+}
+
+function LD_B__HL_ (;) {
+  _B:=mem8 (get16 (_H,_L));
+}
+
+function LD_B_A (;) {
+  _B:=_A;
+}
+
+function LD_C_B (;) {
+  _C:=_B;
+}
+
+// function LD_C_C (;) {}   //NOP
+
+function LD_C_D (;) {
+  _C:=_D;
+}
+
+function LD_C_E (;) {
+  _C:=_E;
+}
+
+function LD_C_H (;) {
+  _C:=_H;
+}
+
+function LD_C_L (;) {
+  _C:=_L;
+}
+
+function LD_C__HL_ (;) {
+  _C:=mem8 (get16 (_H,_L));
+}
+
+function LD_C_A (;) {
+  _C:=_A;
+}
+
+function LD_D_B (;) {
+  _D:=_B;
+}
+
+function LD_D_C (;) {
+  _D:=_C;
+}
+
+// function LD_D_D (;) {}   //NOP
+
+function LD_D_E (;) {
+  _D:=_E;
+}
+function LD_D_H (;) {
+  _D:=_H;
+}
+
+function LD_D_L (;) {
+  _D:=_L;
+}
+
+function LD_D__HL_ (;) {
+  _D:=mem8 (get16 (_H,_L));
+}
+
+function LD_D_A (;) {
+  _D:=_A;
+}
+
+function LD_E_B (;) {
+  _E:=_B;
+}
+
+function LD_E_C (;) {
+  _E:=_C;
+}
+
+function LD_E_D (;) {
+  _E:=_D;
+}
+
+// function LD_E_E (;) {}   //NOP
+
+function LD_E_H (;) {
+  _E:=_H;
+}
+
+function LD_E_L (;) {
+  _E:=_L;
+}
+
+function LD_E__HL_ (;) {
+  _E:=mem8 (get16 (_H,_L));
+}
+
+function LD_E_A (;) {
+  _E:=_A;
+}
+
+function LD_H_B (;) {
+  _H:=_B;
+}
+
+function LD_H_C (;) {
+  _H:=_C;
+}
+
+function LD_H_D (;) {
+  _H:=_D;
+}
+
+function LD_H_E (;) {
+  _H:=_E;
+}
+
+// function LD_H_H (;) {}   //NOP
+
+function LD_H_L (;) {
+  _H:=_L;
+}
+
+function LD_H__HL_ (;) {
+  _H:=mem8 (get16 (_H,_L));
+}
+
+function LD_H_A (;) {
+  _H:=_A;
+}
+
+function LD_L_B (;) {
+  _L:=_B;
+}
+
+function LD_L_C (;) {
+  _L:=_C;
+}
+
+function LD_L_D (;) {
+  _L:=_D;
+}
+
+function LD_L_E (;) {
+  _L:=_E;
+}
+
+function LD_L_H (;) {
+  _L:=_H;
+}
+
+// function LD_L_L (;) {}   //NOP
+
+function LD_L__HL_ (;) {
+  _L:=mem8 (get16 (_H,_L));
+}
+
+function LD_L_A (;) {
+  _L:=_A;
+}
+
+function LD__HL__B (;) {
+  setmem8 (get16 (_H,_L),_B);
+}
+
+function LD__HL__C (;) {
+  setmem8 (get16 (_H,_L),_C);
+}
+
+function LD__HL__D (;) {
+  setmem8 (get16 (_H,_L),_D);
+}
+
+function LD__HL__E (;) {
+  setmem8 (get16 (_H,_L),_E);
+}
+
+function LD__HL__H (;) {
+  setmem8 (get16 (_H,_L),_H);
+}
+
+function LD__HL__L (;) {
+  setmem8 (get16 (_H,_L),_L);
+}
+
+function HALT (;) {
+  halted:=1;
+}
+
+function LD__HL__A (;) {
+  setmem8 (get16 (_H,_L),_A);
+}
+
+function LD_A_B (;) {
+  _A:=_B;
+}
+
+function LD_A_C (;) {
+  _A:=_C;
+}
+
+function LD_A_D (;) {
+  _A:=_D;
+}
+
+function LD_A_E (;) {
+  _A:=_E;
+}
+
+function LD_A_H (;) {
+  _A:=_H;
+}
+
+function LD_A_L (;) {
+  _A:=_L;
+}
+
+function LD_A__HL_ (;) {
+  _A:=mem8 (get16 (_H,_L));
+}
+
+// function LD_A_A (;) {}   //NOP
+
+function ADD_A_B (;) {
+  addA (_B);
+}
+
+function ADD_A_C (;) {
+  addA (_C);
+}
+
+function ADD_A_D (;) {
+  addA (_D);
+}
+
+function ADD_A_E (;) {
+  addA (_E);
+}
+
+function ADD_A_H (;) {
+  addA (_H);
+}
+
+function ADD_A_L (;) {
+  addA (_L);
+}
+
+function ADD_A__HL_ (;) {
+  addA (mem8 (get16 (_H,_L)));
+}
+
+function ADD_A_A (;) {
+  addA (_A);
+}
+
+function ADC_A_B (;) {
+  adcA (_B);
+}
+
+function ADC_A_C (;) {
+  adcA (_C);
+}
+
+function ADC_A_D (;) {
+  adcA (_D);
+}
+
+function ADC_A_E (;) {
+  adcA (_E);
+}
+
+function ADC_A_H (;) {
+  adcA (_H);
+}
+
+function ADC_A_L (;) {
+  adcA (_L);
+}
+
+function ADC_A__HL_ (;) {
+  adcA (mem8 (get16 (_H,_L)));
+}
+
+function ADC_A_A (;) {
+  adcA (_A);
+}
+
+function SUB_A_B (;) {
+  subA (_B);
+}
+
+function SUB_A_C (;) {
+  subA (_C);
+}
+
+function SUB_A_D (;) {
+  subA (_D);
+}
+
+function SUB_A_E (;) {
+  subA (_E);
+}
+
+function SUB_A_H (;) {
+  subA (_H);
+}
+
+function SUB_A_L (;) {
+  subA (_L);
+}
+
+function SUB_A__HL_ (;) {
+  subA (mem8 (get16 (_H,_L)));
+}
+
+function SUB_A_A (;) {
+  subA (_A);
+}
+
+function SBC_A_B (;) {
+  sbcA (_B);
+}
+
+function SBC_A_C (;) {
+  sbcA (_C);
+}
+
+function SBC_A_D (;) {
+  sbcA (_D);
+}
+
+function SBC_A_E (;) {
+  sbcA (_E);
+}
+
+function SBC_A_H (;) {
+  sbcA (_H);
+}
+
+function SBC_A_L (;) {
+  sbcA (_L);
+}
+
+function SBC_A__HL_ (;) {
+  sbcA (mem8 (get16 (_H,_L)));
+}
+
+function SBC_A_A (;) {
+  sbcA (_A);
+}
+
+function AND_A_B (;) {
+  _A:=_A&_B;
+  andA ();
+}
+
+function AND_A_C (;) {
+  _A:=_A&_C;
+  andA ();
+}
+
+function AND_A_D (;) {
+  _A:=_A&_D;
+  andA ();
+}
+
+function AND_A_E (;) {
+  _A:=_A&_E;
+  andA ();
+}
+
+function AND_A_H (;) {
+  _A:=_A&_H;
+  andA ();
+}
+
+function AND_A_L (;) {
+  _A:=_A&_L;
+  andA ();
+}
+
+function AND_A__HL_ (;) {
+  _A:=_A&mem8 (get16 (_H,_L));
+  andA ();
+}
+
+function AND_A_A (;) {
+  andA ();
+}
+
+function XOR_A_B (;) {
+  _A:=xor (_A,_B);
+  orA ();
+}
+
+function XOR_A_C (;) {
+  _A:=xor (_A,_C);
+  orA ();
+}
+
+function XOR_A_D (;) {
+  _A:=xor (_A,_D);
+  orA ();
+}
+
+function XOR_A_E (;) {
+  _A:=xor (_A,_E);
+  orA ();
+}
+
+function XOR_A_H (;) {
+  _A:=xor (_A,_H);
+  orA ();
+}
+
+function XOR_A_L (;) {
+  _A:=xor (_A,_L);
+  orA ();
+}
+
+function XOR_A__HL_ (;) {
+  _A:=xor (_A,memory[shl (_H,8)|_L,uint8]);
+  orA ();
+}
+
+function XOR_A_A (;) {
+  _A:=xor (_A,_A);
+  orA ();
+}
+
+function OR_A_B (;) {
+  _A:=_A|_B;
+  orA ();
+}
+
+function OR_A_C (;) {
+  _A:=_A|_C;
+  orA ();
+}
+
+function OR_A_D (;) {
+  _A:=_A|_D;
+  orA ();
+}
+
+function OR_A_E (;) {
+  _A:=_A|_E;
+  orA ();
+}
+
+function OR_A_H (;) {
+  _A:=_A|_H;
+  orA ();
+}
+
+function OR_A_L (;) {
+  _A:=_A|_L;
+  orA ();
+}
+
+function OR_A__HL_ (;) {
+  _A:=_A|mem8 (get16 (_H,_L));
+  orA ();
+}
+
+function OR_A_A (;) {
+  _A:=_A|_A;
+  orA ();
+}
+
+function CP_A_B (;) {
+  arithmeticA (_B);
+}
+
+function CP_A_C (;) {
+  arithmeticA (_C);
+}
+
+function CP_A_D (;) {
+  arithmeticA (_D);
+}
+
+function CP_A_E (;) {
+  arithmeticA (_E);
+}
+
+function CP_A_H (;) {
+  arithmeticA (_H);
+}
+
+function CP_A_L (;) {
+  arithmeticA (_L);
+}
+
+function CP_A__HL_ (;) {
+  arithmeticA (mem8 (get16 (_H,_L)));
+}
+
+function CP_A_A (;) {
+  arithmeticA (_A);
+}
+
+function RET_NZ (;) {
+  if (_F&0x40=0) _PC:=pop (0);
+}
+
+function POP_BC (;) {
+  uint16 x=pop (0);
+  
+  _B:=high (x);
+  _C:=low (x);
+}
+
+function JP_NZ_nn (;) {
+  if (_F&0x40=0) _PC:=mem16 (_PC);
+  else addpc (2);
+}
+
+function JP_nn (;) {
+  _PC:=mem16 (_PC);
+}
+
+function CALL_NZ_nn (;) {
+  if (_F&0x40=0) {
+    push (_PC+2);
+    _PC:=mem16 (_PC);
+  } else addpc (2);
+}
+
+function PUSH_BC (;) {
+  push (get16 (_B,_C));
+}
+
+function ADD_A_n (;) {
+  addA (mem8 (_PC));
+  incpc ();
+}
+
+function RST_0 (;) {
+  push (_PC);
+  _PC:=0;
+}
+
+function RET_Z (;) {
+  if (_F&0x40<>0) _PC:=pop (0);
+}
+
+function RET (;) {
+  _PC:=pop (0);
+}
+
+function JP_Z_nn (;) {
+  if (_F&0x40<>0)
+    _PC:=mem16 (_PC);
+  else addpc (2);
+}
+
+function CB (;) {       // prefix
+  uint8 o=mem8 (_PC);
+  
+  incpc ();
+  prefixcb (o);
+}
+
+function CALL_Z_nn (;) {
+  
+  if (_F&0x40<>0) {
+    push (_PC+2);
+    _PC:=mem16 (_PC);
+  } else addpc (2);
+}
+
+function CALL_nn (;) {
+  push (_PC+2);
+  _PC:=mem16 (_PC);
+}
+
+function ADC_A_n (;) {
+  adcA (mem8 (_PC));
+  incpc ();
+}
+
+function RST_8 (;) {
+  push (_PC);
+  _PC:=8;
+}
+
+function RET_NC (;) {
+  if (_F&0x1=0) _PC:=pop (0);
+}
+
+function POP_DE (;) {
+  uint16 x=pop (0);
+  
+  _D:=high (x);
+  _E:=low (x);
+}
+
+function JP_NC_nn (;) {
+  
+  if (_F&0x1=0) _PC:=mem16 (_PC);
+  else addpc (2);
+}
+
+function OUT__n__A (;) {
+  out (mem8 (_PC),_A);
+  incpc ();
+}
+
+function CALL_NC_nn (;) {
+  
+  if (_F&0x1=0) {
+    push (_PC+2);
+    _PC:=memory[_PC,uint8]|shl (memory[(_PC+1)&0xffff,uint8],8);
+  } else _PC:=_PC+2;
+}
+
+function PUSH_DE (;) {
+  push (get16 (_D,_E));
+}
+
+function SUB_A_n (;) {
+  subA (mem8 (_PC));
+  incpc ();
+}
+
+function RST_16 (;) {
+  push (_PC);
+  _PC:=16;
+}
+
+function RET_C (;) {
+  if (_F&0x1<>0) _PC:=pop (0);
+}
+
+function EXX (;) {
+  uint8 x;
+  
+  x:=_B;_B:=__B;__B:=x;
+  x:=_C;_C:=__C;__C:=x;
+
+  x:=_D;_D:=__D;__D:=x;
+  x:=_E;_E:=__E;__E:=x;
+
+  x:=_H;_H:=__H;__H:=x;
+  x:=_L;_L:=__L;__L:=x;
+}
+
+function JP_C_nn (;) {
+  
+  if (_F&0x1<>0) _PC:=mem16 (_PC);
+  else addpc (2);
+}
+
+function IN_A__n_ (;) {
+  _A:=in (get16 (_A,mem8 (_PC)));
+  incpc ();
+}
+
+function CALL_C_nn (;) {
+  
+  if (_F&0x1<>0) {
+    push (_PC+2);
+    _PC:=mem16 (_PC);
+  } else addpc (2);
+}
+
+function IX (;) {
+  _IT:=_IX;
+  opIXIY ();
+  _IX:=_IT;
+}
+
+function SBC_A_n (;) {
+  sbcA (mem8 (_PC));
+  incpc ();
+}
+
+function RST_24 (;) {
+  push (_PC);
+  _PC:=24;
+}
+
+function RET_PO (;) {
+  if (_F&0x4=0) _PC:=pop (0);
+}
+
+function POP_HL (;) {
+  uint16 x=pop (0);
+  
+  _H:=high (x);
+  _L:=low (x);
+}
+
+function JP_PO_nn (;) {
+  if (_F&0x4=0) _PC:=mem16 (_PC);
+  else addpc (2);
+}
+
+function EX__SP__HL (;) {
+  uint16 l=mem8 (_SP),h=mem8 (_SP+1);
+  
+  setmem8 (_SP,_L);
+  setmem8 (_SP+1,_H);
+  _H:=h;
+  _L:=l;
+}
+
+function CALL_PO_nn (;) {
+  
+  if (_F&0x4=0) {
+    push (_PC+2);
+    _PC:=mem16 (_PC);
+  } else addpc (2);
+}
+
+function PUSH_HL (;) {
+  push (get16 (_H,_L));
+}
+
+function AND_A_n (;) {
+  _A:=_A&mem8 (_PC);
+  incpc ();
+  andA ();
+}
+
+function RST_32 (;) {
+  push (_PC);
+  _PC:=32;
+}
+
+function RET_PE (;) {
+  if (_F&0x4<>0) _PC:=pop (0);
+}
+
+function JP__HL_ (;) {
+  _PC:=get16 (_H,_L);
+}
+
+function JP_PE_nn (;) {
+  if (_F&0x4<>0) _PC:=mem16 (_PC);
+  else addpc (2);
+}
+
+function EX_DE_HL (;) {
+  uint8 x;
+  
+  x:=_D;_D:=_H;_H:=x;
+  x:=_E;_E:=_L;_L:=x;
+}
+
+function CALL_PE_nn (;) {
+  
+  if (_F&0x4<>0) {
+    push (_PC+2);
+    _PC:=mem16 (_PC);
+  } else addpc (2);
+}
+
+function ED (;) {       // prefix
+  uint8 op=memory[_PC,uint8];
+
+  incpc ();
+  if (64<=op and op<=126)
+    call:=op1de[shl (op-64,3),pointer];
+  else if (160<=op and op<=187)
+    call:=op2de[shl (op-160,3),pointer];
+  else call:=NOP;
+  call ();
+}
+
+function XOR_A_n (;) {
+  _A:=xor (_A,mem8 (_PC));
+  incpc ();
+  orA ();
+}
+
+function RST_40 (;) {
+  push (_PC);
+  _PC:=40;
+}
+
+function RET_NS (;) {
+  if (_F&0x80=0) _PC:=pop (0);
+}
+
+function POP_AF (;) {
+  uint16 x=pop (0);
+  
+  _A:=high (x);
+  _F:=low (x);
+}
+
+function JP_NS_nn (;) {
+  if (_F&0x80=0) _PC:=mem16 (_PC);
+  else addpc (2);
+}
+
+function DI (;) {
+  _IFF1:=0;
+  _IFF2:=0;
+}
+
+function CALL_NS_nn (;) {
+  
+  if (_F&0x80=0) {
+    push (_PC+2);
+    _PC:=mem16 (_PC);
+  } else addpc (2);
+}
+
+function PUSH_AF (;) {
+  push (get16 (_A,_F));
+}
+
+function OR_A_n (;) {
+  _A:=_A|mem8 (_PC);
+  incpc ();
+  orA ();
+}
+
+function RST_48 (;) {
+  push (_PC);
+  _PC:=48;
+}
+
+function RET_S (;) {
+  if (_F&0x80<>0) _PC:=pop (0);
+}
+
+function LD_SP_HL (;) {
+  _SP:=get16 (_H,_L);
+}
+
+function JP_S_nn (;) {
+  if (_F&0x80<>0) _PC:=mem16 (_PC);
+  else addpc (2);
+}
+
+function EI (;) {
+  _IFF1:=1;
+  _IFF2:=1;
+}
+
+function CALL_S_nn (;) {
+  
+  if (_F&0x80<>0) {
+    push (_PC+2);
+    _PC:=mem16 (_PC);
+  } else addpc (2);
+}
+
+function IY (;) {
+  _IT:=_IY;
+  opIXIY ();
+  _IY:=_IT;
+}
+
+function CP_A_n (;) {
+  arithmeticA (mem8 (_PC));
+  incpc ();
+}
+
+function RST_56 (;) {
+  push (_PC);
+  _PC:=56;
+}
+
+// ED + opcode >=64
+
+function IN_B__C_ (;) {
+  _B:=inBC (0);
+}
+
+function OUT__C__B (;) {
+  out (_C,_B);
+}
+
+function SBC_HL_BC (;) {
+  uint16 r=sbc16 (get16 (_H,_L),get16 (_B,_C));
+  
+  _H:=high (r);
+  _L:=low (r);
+}
+
+function LD__nn__BC (;) {
+  setmem16 (mem16 (_PC),get16 (_B,_C));
+  addpc (2);
+}
+
+function NEG_A (;) {
+  uint8 a=_A;
+  
+  _A:=0;
+  subA (a);
+}
+
+function RETN (;) {
+  _IFF1:=_IFF2;
+  _PC:=pop (0);
+}
+
+function IM_0 (;) {
+  _IM:=0;
+}
+
+function LD_I_A (;) {
+  _I:=_A;
+}
+
+function IN_C__C_ (;) {
+  _C:=inBC (0);
+}
+
+function OUT__C__C (;) {
+  out (_C,_C);
+}
+
+function ADC_HL_BC (;) {
+  uint16 r=adc16 (get16 (_H,_L),get16 (_B,_C));
+  
+  _H:=high (r);
+  _L:=low (r);
+}
+
+function LD_BC__nn_ (;) {
+  uint16 a=mem16 (_PC);
+  
+  addpc (2);
+  _C:=mem8 (a);
+  _B:=mem8 (a+1);
+}
+
+//function NEG_A (;)
+
+function RETI (;) {
+  _PC:=pop (0);
+}
+
+//function IM_0 (;)
+
+function LD_R_A (;) {
+  asigr (_A);
+}
+
+function IN_D__C_ (;) {
+  _D:=inBC (0);
+}
+
+function OUT__C__D (;) {
+  out (_C,_D);
+}
+
+function SBC_HL_DE (;) {
+  uint16 r=sbc16 (get16 (_H,_L),get16 (_D,_E));
+  
+  _H:=high (r);
+  _L:=low (r);
+}
+
+//function NEG_A (;)
+
+//function RETN (;)
+
+function IM_1 (;) {
+  _IM:=1;
+}
+
+function IN_E__C_ (;) {
+  _E:=inBC (0);
+}
+
+function OUT__C__E (;) {
+  out (_C,_E);
+}
+
+function LD__nn__DE (;) {
+  setmem16 (mem16 (_PC),get16 (_D,_E));
+  addpc (2);
+}
+
+function LD_A_I (;) {
+  _A:=_I;
+  andA ();
+  if (_IFF2<>0) _F:=_F|0x4;
+  else _F:=_F&~0x4;
+}
+
+function ADC_HL_DE (;) {
+  uint16 r=adc16 (get16 (_H,_L),get16 (_D,_E));
+  
+  _H:=high (r);
+  _L:=low (r);
+}
+
+function LD_DE__nn_ (;) {
+  uint16 a=mem16 (_PC);
+  
+  addpc (2);
+  _E:=mem8 (a);
+  _D:=mem8 (a+1);
+}
+
+//function NEG_A (;)
+
+//function RETI (;)
+
+function IM_2 (;) {
+  _IM:=2;
+}
+
+function LD_A_R (;) {
+  _A:=_R;
+  andA ();
+  if (_IFF2<>0) _F:=_F|0x4;
+  else _F:=_F&~0x4;
+}
+
+function IN_H__C_ (;) {
+  _H:=inBC (0);
+}
+
+function OUT__C__H (;) {
+  out (_C,_H);
+}
+
+function SBC_HL_HL (;) {
+  uint16 r=sbc16 (get16 (_H,_L),get16 (_H,_L));
+  
+  _H:=high (r);
+  _L:=low (r);
+}
+
+//function LD__nn__HL (;)
+
+//function NEG_A (;)
+
+//function RETN (;)
+
+//function IM_0 (;)
+
+function RRD (;) {
+  uint8 m=mem8 (get16 (_H,_L)),a=_A;
+  
+  _A:=(_A&0xf0)|(m&0xf);
+  setmem8 (get16 (_H,_L),shr (m,4)|shl (a,4));
+  _F:=(_F&0x1)|(_A&0xa8);
+  if (_A=0) _F:=_F|0x40;
+  if (parity (_A)<>0) _F:=_F|0x4;
+}
+
+function IN_L__C_ (;) {
+  _L:=inBC (0);
+}
+
+function OUT__C__L (;) {
+  out (_C,_L);
+}
+
+function ADC_HL_HL (;) {
+  uint16 r=adc16 (get16 (_H,_L),get16 (_H,_L));
+  
+  _H:=high (r);
+  _L:=low (r);
+}
+
+//function LD_HL__nn_ (;)
+
+//function NEG_A (;)
+
+//function RETI (;)
+
+//function IM_0 (;)
+
+function RLD (;) {
+  uint8 m=mem8 (get16 (_H,_L)),a=_A;
+  
+  _A:=(_A&0xf0)|shr (m,4);
+  setmem8 (get16 (_H,_L),shl (m,4)|a&0xf);
+  _F:=(_F&0x1)|(_A&0xa8);
+  if (_A=0) _F:=_F|0x40;
+  if (parity (_A)<>0) _F:=_F|0x4;
+}
+
+function IN__C_ (;) {
+  inBC (0);
+}
+
+function OUT__C__0 (;) {
+  out (_C,0);
+}
+
+function SBC_HL_SP (;) {
+  uint16 r=sbc16 (get16 (_H,_L),_SP);
+  
+  _H:=high (r);
+  _L:=low (r);
+}
+
+function LD__nn__SP (;) {
+  setmem16 (mem16 (_PC),_SP);
+  addpc (2);
+}
+
+//function NEG_A (;)
+
+//function RETN (;)
+
+//function IM_1 (;)
+
+//function NOP (;)
+
+function IN_A__C_ (;) {
+  _A:=inBC (0);
+}
+
+function OUT__C__A (;) {
+  out (_C,_A);
+}
+
+function ADC_HL_SP (;) {
+  uint16 r=adc16 (get16 (_H,_L),_SP);
+  
+  _H:=high (r);
+  _L:=low (r);
+}
+
+function LD_SP__nn_ (;) {
+  _SP:=mem16 (mem16 (_PC));
+  addpc (2);
+}
+
+//function NEG_A (;)
+
+//function RETI (;)
+
+//function IM_2 (;)
+
+// ED + opcode >=160
+
+function LDI (;) {
+  ldi (1);
+}
+
+function CPI (;) {
+  cpi (1,0);
+}
+
+function INI (;) {
+  uint16 h=get16 (_H,_L);
+
+  setmem8 (h,in (_C));
+  _B:=_B-1;
+  h:=h+1;
+  _H:=high (h);
+  _L:=low (h);
+  _F:=_F|0x2;
+  if (_B=0) _F:=_F|0x40;
+  else _F:=_F&~0x40;
+}
+
+function OUTI (;) {
+  uint16 h=get16 (_H,_L);
+
+  _B:=_B-1;
+  out (_C,mem8 (h));
+  h:=h+1;
+  _H:=high (h);
+  _L:=low (h);
+  _F:=_F|0x2;
+  if (_B=0) _F:=_F|0x40;
+  else _F:=_F&~0x40;
+}
+
+//function NOP (;)
+
+//function NOP (;)
+
+//function NOP (;)
+
+//function NOP (;)
+
+function LDD (;) {
+  ldi (-1);
+}
+
+function CPD (;) {
+cpi (-1,0);
+}
+
+function IND (;) {
+  uint16 h=get16 (_H,_L);
+
+  setmem8 (h,in (_C));
+  _B:=_B-1;
+  h:=h-1;
+  _H:=high (h);
+  _L:=low (h);
+  _F:=_F|0x2;
+  if (_B=0) _F:=_F|0x40;
+  else _F:=_F&~0x40;
+}
+
+function OUTD (;) {
+  uint16 h=get16 (_H,_L);
+
+  _B:=_B-1;
+  out (_C,mem8 (h));
+  h:=h-1;
+  _H:=high (h);
+  _L:=low (h);
+  _F:=_F|0x2;
+  if (_B=0) _F:=_F|0x40;
+  else _F:=_F&~0x40;
+}
+
+//function NOP (;)
+
+//function NOP (;)
+
+//function NOP (;)
+
+//function NOP (;)
+
+function LDIR (;) {
+  ldi (1);
+  if (_B|_C<>0) addpc (-2);
+}
+
+function CPIR (;) {
+  cpi (1,1);
+}
+
+function INIR (;) {
+  uint16 h=get16 (_H,_L);
+
+  setmem8 (h,in (_C));
+  _B:=_B-1;
+  h:=h+1;
+  _H:=high (h);
+  _L:=low (h);
+  _F:=_F|0x42;
+  if (_B|_C<>0) addpc (-2);
+}
+
+function OTIR (;) {
+  uint16 h=get16 (_H,_L);
+
+  _B:=_B-1;
+  out (_C,mem8 (h));
+  h:=h+1;
+  _H:=high (h);
+  _L:=low (h);
+  _F:=_F|0x42;
+  if (_B<>0) addpc (-2);
+}
+
+//function NOP (;)
+
+//function NOP (;)
+
+//function NOP (;)
+
+//function NOP (;)
+
+function LDDR (;) {
+  ldi (-1);
+  if (_B|_C<>0) addpc (-2);
+}
+
+function CPDR (;) {
+  cpi (-1,1);
+}
+
+function INDR (;) {
+  uint16 h=get16 (_H,_L);
+
+  setmem8 (h,in (_C));
+  _B:=_B-1;
+  h:=h-1;
+  _H:=high (h);
+  _L:=low (h);
+  _F:=_F|0x42;
+  if (_B|_C<>0) addpc (-2);
+}
+
+function OTDR (;) {         //opcode 187
+  uint16 h=get16 (_H,_L);
+
+  _B:=_B-1;
+  out (_C,mem8 (h));
+  h:=h-1;
+  _H:=high (h);
+  _L:=low (h);
+  _F:=_F|0x42;
+  if (_B<>0) addpc (-2);
+}
+
+function ADD_IX_BC (;) {    //opcode prefix index IX,IY
+  _IT:=add16 (_IT,get16 (_B,_C));
+}
+
+function ADD_IX_DE (;) {
+  _IT:=add16 (_IT,get16 (_D,_E));
+}
+
+function LD_IX_nn (;) {
+  _IT:=mem16 (_PC);
+  addpc (2);
+}
+
+function LD__nn__IX (;) {
+  setmem16 (mem16 (_PC),_IT);
+  addpc (2);
+}
+
+function INC_IX (;) {
+  _IT:=_IT+1;
+}
+
+function INC_IXH (;) {
+  _IT:=get16 (inc8 (high (_IT)),_IT);
+}
+
+function DEC_IXH (;) {
+  _IT:=get16 (dec8 (high (_IT)),_IT);
+}
+
+function LD_IXH_n (;) {
+  _IT:=get16 (mem8 (_PC),_IT);
+  incpc ();
+}
+
+function ADD_IX_IX (;) {
+  _IT:=add16 (_IT,_IT);
+}
+
+function LD_IX__nn_ (;) {
+  _IT:=mem16 (mem16 (_PC));
+  addpc (2);
+}
+
+function DEC_IX (;) {
+  _IT:=_IT-1;
+}
+
+function INC_IXL (;) {
+  _IT:=_IT&0xff00|(inc8 (_IT)&0xff);
+}
+
+function DEC_IXL (;) {
+  _IT:=_IT&0xff00|(dec8 (_IT)&0xff);
+}
+
+function LD_IXL_n (;) {
+  _IT:=_IT&0xff00|mem8 (_PC);
+  incpc ();
+}
+
+function INC__IX_d_ (;) {
+  uint16 a=_IT+memi8 (_PC);
+  
+  incpc ();
+  setmem8 (a,inc8 (mem8 (a)));
+}
+
+function DEC__IX_d_ (;) {
+  uint16 a=_IT+memi8 (_PC);
+  
+  incpc ();
+  setmem8 (a,dec8 (mem8 (a)));
+}
+
+function LD__IX_d__n (;) {
+  uint16 a=_IT+memi8 (_PC);
+  
+  incpc ();
+  setmem8 (a,mem8 (_PC));
+  incpc ();
+}
+
+function ADD_IX_SP (;) {
+  _IT:=add16 (_IT,_SP);
+}
+
+
+function LD_B_IXH (;) {
+  _B:=high (_IT);
+}
+
+function LD_B_IXL (;) {
+  _B:=low (_IT);
+}
+
+function LD_B__IX_d_ (;) {
+  _B:=mem8 (_IT+memi8 (_PC));
+  incpc ();
+}
+
+function LD_C_IXH (;) {
+  _C:=high (_IT);
+}
+
+function LD_C_IXL (;) {
+  _C:=low (_IT);
+}
+
+function LD_C__IX_d_ (;) {
+  _C:=mem8 (_IT+memi8 (_PC));
+  incpc ();
+}
+
+function LD_D_IXH (;) {
+  _D:=high (_IT);
+}
+
+function LD_D_IXL (;) {
+  _D:=low (_IT);
+}
+
+function LD_D__IX_d_ (;) {
+  _D:=mem8 (_IT+memi8 (_PC));
+  incpc ();
+}
+
+function LD_E_IXH (;) {
+  _E:=high (_IT);
+}
+
+function LD_E_IXL (;) {
+  _E:=low (_IT);
+}
+
+function LD_E__IX_d_ (;) {
+  _E:=mem8 (_IT+memi8 (_PC));
+  incpc ();
+}
+
+function LD_IXH_B (;) {
+  _IT:=get16 (_B,_IT);
+}
+
+function LD_IXH_C (;) {
+  _IT:=get16 (_C,_IT);
+}
+
+function LD_IXH_D (;) {
+  _IT:=get16 (_D,_IT);
+}
+
+function LD_IXH_E (;) {
+  _IT:=get16 (_E,_IT);
+}
+
+//function LD_IXH_IXH (;) {}
+
+function LD_IXH_IXL (;) {
+  _IT:=get16 (_IT,_IT);
+}
+
+function LD_H__IX_d_ (;) {
+  _H:=mem8 (_IT+memi8 (_PC));
+  incpc ();
+}
+
+function LD_IXH_A (;) {
+  _IT:=get16 (_A,_IT);
+}
+
+function LD_IXL_B (;) {
+  _IT:=_IT&0xff00|_B;
+}
+
+function LD_IXL_C (;) {
+  _IT:=_IT&0xff00|_C;
+}
+
+function LD_IXL_D (;) {
+  _IT:=_IT&0xff00|_D;
+}
+
+function LD_IXL_E (;) {
+  _IT:=_IT&0xff00|_E;
+}
+
+function LD_IXL_IXH (;) {
+  _IT:=_IT&0xff00|shr (_IT,8);
+}
+
+//function LD_IXL_IXL (;) {}
+
+function LD_L__IX_d_ (;) {
+  _L:=mem8 (_IT+memi8 (_PC));
+  incpc ();
+}
+
+function LD_IXL_A (;) {
+  _IT:=_IT&0xff00|_A;
+}
+
+function LD__IX_d__B (;) {
+  setmem8 (_IT+memi8 (_PC),_B);
+  incpc ();
+}
+
+function LD__IX_d__C (;) {
+  setmem8 (_IT+memi8 (_PC),_C);
+  incpc ();
+}
+
+function LD__IX_d__D (;) {
+  setmem8 (_IT+memi8 (_PC),_D);
+  incpc ();
+}
+
+function LD__IX_d__E (;) {
+  setmem8 (_IT+memi8 (_PC),_E);
+  incpc ();
+}
+
+function LD__IX_d__H (;) {
+  setmem8 (_IT+memi8 (_PC),_H);
+  incpc ();
+}
+
+function LD__IX_d__L (;) {
+  setmem8 (_IT+memi8 (_PC),_L);
+  incpc ();
+}
+
+function LD__IX_d__A (;) {
+  setmem8 (_IT+memi8 (_PC),_A);
+  incpc ();
+}
+
+function LD_A_IXH (;) {
+  _A:=high (_IT);
+}
+
+function LD_A_IXL (;) {
+  _A:=low (_IT);
+}
+
+function LD_A__IX_d_ (;) {
+  _A:=mem8 (_IT+memi8 (_PC));
+  incpc ();
+}
+
+
+function ADD_A_IXH (;) {
+  addA (high (_IT));
+}
+
+function ADD_A_IXL (;) {
+  addA (low (_IT));
+}
+
+function ADD_A__IX_d_ (;) {
+  addA (mem8 (_IT+memi8 (_PC)));
+  incpc ();
+}
+
+function ADC_A_IXH (;) {
+  adcA (high (_IT));
+}
+
+function ADC_A_IXL (;) {
+  adcA (low (_IT));
+}
+
+function ADC_A__IX_d_ (;) {
+  adcA (mem8 (_IT+memi8 (_PC)));
+  incpc ();
+}
+
+function SUB_A_IXH (;) {
+  subA (high (_IT));
+}
+
+function SUB_A_IXL (;) {
+  subA (low (_IT));
+}
+
+function SUB_A__IX_d_ (;) {
+  subA (mem8 (_IT+memi8 (_PC)));
+  incpc ();
+}
+
+function SBC_A_IXH (;) {
+  sbcA (high (_IT));
+}
+
+function SBC_A_IXL (;) {
+  sbcA (low (_IT));
+}
+
+function SBC_A__IX_d_ (;) {
+  uint16 a=_IT+memory[_PC,int8];
+  
+  sbcA (mem8 (_IT+memi8 (_PC)));
+  incpc ();
+}
+
+function AND_A_IXH (;) {
+  _A:=_A&high (_IT);
+  andA ();
+}
+
+function AND_A_IXL (;) {
+  _A:=_A&low (_IT);
+  andA ();
+}
+
+function AND_A__IX_d_ (;) {
+  _A:=_A&mem8 (_IT+memi8 (_PC));
+  incpc ();
+  andA ();
+}
+
+function XOR_A_IXH (;) {
+  _A:=xor (_A,high (_IT));
+  orA ();
+}
+
+function XOR_A_IXL (;) {
+  _A:=xor (_A,low (_IT));
+  orA ();
+}
+
+function XOR_A__IX_d_ (;) {
+  _A:=xor (_A,mem8 (_IT+memi8 (_PC)));
+  incpc ();
+  orA ();
+}
+
+function OR_A_IXH (;) {
+  _A:=_A|high (_IT);
+  orA ();
+}
+
+function OR_A_IXL (;) {
+  _A:=_A|low (_IT);
+  orA ();
+}
+
+function OR_A__IX_d_ (;) {
+  _A:=_A|mem8 (_IT+memi8 (_PC));
+  incpc ();
+  orA ();
+}
+
+function CP_A_IXH (;) {
+  arithmeticA (high (_IT));
+}
+
+function CP_A_IXL (;) {
+  arithmeticA (low (_IT));
+}
+
+function CP_A__IX_d_ (;) {
+  arithmeticA (mem8 (_IT+memi8 (_PC)));
+  incpc ();
+}
+
+function IX_CB (;) {
+  uint8 a=_IT+memi8 (_PC);
+
+  incpc ();
+  prefix2cb (mem8 (_PC),a);
+  incpc ();
+}
+
+function POP_IX (;) {
+  _IT:=pop (0);
+}
+
+function EX__SP__IX (;) {
+  uint16 x=_IT;
+  
+  _IT:=mem16 (_SP);
+  setmem16 (_SP,x);
+}
+
+function PUSH_IX (;) {
+  push (_IT);
+}
+
+function JP__IX_ (;) {
+  _PC:=_IT;
+}
+
+function LD_SP_IX (;) {
+  _SP:=_IT;
+}
+
+
+function defaultIXIY (;uint8 o) {
+  _R:=addr (-1);
+  call:=opcode[shl (o,3),pointer];
+  call ();  
+}
+
+function opIXIY (;) {
+  uint8 op=memory[_PC,uint8];
+  
+  incpc ();
+  addr (1);
+  if (op<112) {
+    if (op<54) {
+      if (op<34) {
+        
+        if (op=33) LD_IX_nn ();
+        else if (op=25) ADD_IX_DE ();
+        else if (op=9) ADD_IX_BC ();
+        else defaultIXIY (op);
+      
+      } else if (op=34) LD__nn__IX ();
+      else {
+        if (op<44) {
+          if (op<38) {
+            
+            if (op=35) INC_IX ();
+            else if (op=36) INC_IXH ();
+            else DEC_IXH ();
+          
+          } else if (op=38) LD_IXH_n ();
+          else {
+            
+            if (op=41) ADD_IX_IX ();
+            else if (op=42) LD_IX__nn_ ();
+            else if (op=43) DEC_IX ();
+            else defaultIXIY (op);
+          }
+        } else if (op=44) INC_IXL ();
+        else {
+          if (op<52) {
+            
+            if (op=45) DEC_IXL ();
+            else if (op=46) LD_IXL_n ();
+            else defaultIXIY (op);
+          
+          } else if (op=52) INC__IX_d_ ();   
+          else DEC__IX_d_ ();
+        }
+      }
+    } else if (op=54) LD__IX_d__n ();
+    else {
+      if (op<85) {
+        if (op<77) {
+          
+          if (op=76) LD_C_IXH ();
+          else if (op=70) LD_B__IX_d_ ();
+          else if (op=69) LD_B_IXL ();
+          else if (op=68) LD_B_IXH ();
+          else if (op=57) ADD_IX_SP ();
+          else defaultIXIY (op);
+          
+        } else if (op=77) LD_C_IXL ();
+        else {
+          
+          if (op=78) LD_C__IX_d_ ();
+          else if (op=84) LD_D_IXH ();
+          else defaultIXIY (op);
+          
+        }
+      } else if (op=85) LD_D_IXL ();
+      else {
+        if (op<99) {
+          if (op<93) {
+            
+            if (op=92) LD_E_IXH ();
+            else if (op=86) LD_D__IX_d_ ();
+            else defaultIXIY (op);
+            
+          } else if (op=93) LD_E_IXL ();
+          else {
+            
+            if (op=94) LD_E__IX_d_ ();
+            else if (op=96) LD_IXH_B ();
+            else if (op=97) LD_IXH_C ();
+            else if (op=98) LD_IXH_D ();
+            else defaultIXIY (op);
+            
+          }
+        } else if (op=99) LD_IXH_E ();
+        else {
+          if (op<105) {
+            
+            if (op=100) NOP ();         //LD_IXH_IXH ();
+            else if (op=101) LD_IXH_IXL ();
+            else if (op=102) LD_H__IX_d_ ();
+            else if (op=103) LD_IXH_A ();
+            else LD_IXL_B ();
+            
+          } else if (op=105) LD_IXL_C ();
+          else {
+            
+            if (op=106) LD_IXL_D ();
+            else if (op=107) LD_IXL_E ();
+            else if (op=108) LD_IXL_IXH ();
+            else if (op=109) NOP ();    //LD_IXL_IXL ();
+            else if (op=110) LD_L__IX_d_ ();
+            else LD_IXL_A ();
+          }
+        }
+      }
+    }
+  } else if (op=112) LD__IX_d__B ();
+  else {
+    if (op<181) {
+      if (op<142) {
+        if (op<119) {
+          
+          if (op=113) LD__IX_d__C ();
+          else if (op=114) LD__IX_d__D ();
+          else if (op=115) LD__IX_d__E ();
+          else if (op=116) LD__IX_d__H ();
+          else if (op=117) LD__IX_d__L ();
+          else defaultIXIY (op);
+          
+        } else if (op=119) LD__IX_d__A ();
+        else {
+          if (op<126) {
+            
+            if (op=125) LD_A_IXL ();
+            else if (op=124) LD_A_IXH ();
+            else defaultIXIY (op);
+            
+          } else if (op=126) LD_A__IX_d_ ();
+          else {
+            
+            if (op=132) ADD_A_IXH ();
+            else if (op=133) ADD_A_IXL ();
+            else if (op=134) ADD_A__IX_d_ ();
+            else if (op=140) ADC_A_IXH ();
+            else if (op=141) ADC_A_IXL ();
+            else defaultIXIY (op);
+            
+          }
+        }
+      } else if (op=142) ADC_A__IX_d_ ();
+      else {
+        if (op<166) {
+          
+          if (op=165) AND_A_IXL ();
+          else if (op=164) AND_A_IXH ();
+          else if (op=158) SBC_A__IX_d_ ();
+          else if (op=157) SBC_A_IXL ();
+          else if (op=156) SBC_A_IXH ();
+          else if (op=150) SUB_A__IX_d_ ();
+          else if (op=149) SUB_A_IXL ();
+          else if (op=148) SUB_A_IXH ();
+          else defaultIXIY (op);
+          
+        } else if (op=166) AND_A__IX_d_ ();
+        else {
+          
+          if (op=180) OR_A_IXH ();
+          else if (op=174) XOR_A__IX_d_ ();
+          else if (op=173) XOR_A_IXL ();
+          else if (op=172) XOR_A_IXH ();
+          else defaultIXIY (op);
+        }
+      }
+    } else if (op=181) OR_A_IXL ();
+    else {
+      if (op<203) {
+        
+        if (op=190) CP_A__IX_d_ ();
+        else if (op=189) CP_A_IXL ();
+        else if (op=188) CP_A_IXH ();
+        else if (op=182) OR_A__IX_d_ ();
+        else defaultIXIY (op);
+        
+    } else if (op=203) IX_CB ();
+      else {
+
+        if (op=225) POP_IX ();
+        else if (op=227) EX__SP__IX ();
+        else if (op=229) PUSH_IX ();
+        else if (op=233) JP__IX_ ();
+        else if (op=249) LD_SP_IX ();
+        else defaultIXIY (op);
+
+      }
+    }
+  }
+}
+
+function initZ80 (;) {
+  _PC:=0;_IX:=0;_IY:=0;
+//  _SP:=0xffff;
+_SP:=0;
+//  _A:=0xff;_F:=0xff;
+_A:=0;_F:=0;
+  _B:=0;_C:=0;
+  _D:=0;_E:=0;
+  _H:=0;_L:=0;
+
+  __A:=0;__F:=0;
+  __B:=0;__C:=0;
+  __D:=0;__E:=0;
+  __H:=0;__L:=0;
+  
+  _I:=0;_R:=0;
+  _IM:=0;
+  _IFF1:=0;_IFF2:=0;
+  halted:=0;
+}
+
+function intest (uint16 p;) {
+  p:=0;
+}
+
+function outtest (;uint16 p,uint8 v) {
+  uint16 a;
+
+  if(v=1) {
+    string.buffer[1,uint8]:=0;
+    if (_C=2) {
+      string.buffer[uint8]:=_E;
+      string.write (system.out,string.buffer);
+    } else if (_C=9) {
+      a:=get16 (_D,_E);
+      do {
+        if (mem8 (a)='$') break;
+        string.buffer[uint8]:=mem8 (a);
+        string.write (system.out,string.buffer);
+        a:=a+1;
+        continue;
+      }
+    }
+  }
+}
+
+
+function main (int8 code;
+    int64 parameters,pointer parameter,pointer enviroment) {
+  int64 file,n;
+  
+  string.hexDigit:=4;
+  memory:=system.memory (0x10000);
+  file:=system.open ("zexdoc.com",system.O_RDONLY,0);
+  n:=system.seek (file,0,system.SEEK_END);
+  system.seek (file,0,system.SEEK_SET);
+  system.read (file,memory+0x100,n);
+  pin:=intest;
+  pout:=outtest;
+  
+  memory[5,uint8]:=0x3e;
+  memory[6,uint8]:=0x01;
+  memory[7,uint8]:=0xd3;
+  memory[8,uint8]:=0x00;
+  memory[9,uint8]:=0xc9;
+
+  initZ80 ();
+  _PC:=0x100;
+  do {
+/*
+string.write (system.out,"PC=");
+string.write (system.out,string.hexadecimal (_PC));
+string.write (system.out," o=");
+string.write (system.out,string.decimal (memory[_PC,uint8]));
+string.write (system.out," p=");
+string.write (system.out,string.decimal (memory[_PC+1,uint8]));
+
+string.write (system.out," AF=");
+string.write (system.out,string.hexadecimal ((shl (_A,8)|_F)));
+string.write (system.out," BC=");
+string.write (system.out,string.hexadecimal (shl (_B,8)|_C));
+string.write (system.out," DE=");
+string.write (system.out,string.hexadecimal (shl (_D,8)|_E));
+string.write (system.out," HL=");
+string.write (system.out,string.hexadecimal (shl (_H,8)|_L));
+
+string.write (system.out," SP=");
+string.write (system.out,string.hexadecimal (_SP));
+string.write (system.out,"\n");
+
+string.write (system.out," (0x0103)=");
+string.write (system.out,string.hexadecimal (memory[0x0103,uint8]));
+
+string.write (system.out,"\n");
+*/
+    step ();
+
+    if (_PC=0) break;
+    continue;
+  }
+  string.write (system.out,"\n");
+}

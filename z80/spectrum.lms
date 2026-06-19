@@ -1,0 +1,521 @@
+unit spectrum;
+
+import system (
+  memory:1:0,
+  open:1:2,
+  seek:1:2,
+  read:1:2,
+  write:0:3,
+  close:0:1,
+  int64 in,
+  int64 out,
+  int64 O_RDONLY,
+  int64 O_WRONLY,
+  int64 SEEK_SET,
+  int64 SEEK_END
+);
+
+import string (
+  write:0:2,
+  hexadecimal:1:0,
+  decimal:1:0,
+  length:1:0,
+  buffer,
+  int8 hexDigit
+);
+
+import z80 (
+  initZ80:0:0,
+  step:0:0,
+  interrupt:0:1,
+  get16:1:1,
+  uint8 _A,uint8 _F,
+  uint8 _B,uint8 _C,
+  uint8 _H,uint8 _L,
+  uint8 _I,uint8 _R,
+  uint8 _D,uint8 _E,
+  uint8 __B,uint8 __C,
+  uint8 __D,uint8 __E,
+  uint8 __H,uint8 __L,
+  uint8 __A,uint8 __F,
+  uint8 _IFF1,uint8 _IFF2,
+  uint8 _IM,
+  uint16 _PC,
+  uint16 _SP,
+  uint16 _IX,
+  uint16 _IY,
+  pointer pin,
+  pointer pout,
+  pointer memory,
+  uint8 _IM,
+  uint8 halted
+);
+
+import (
+  XOpenDisplay,
+  XDefaultDepth,
+  XDefaultVisual,
+  XDefaultRootWindow,
+  XCreateSimpleWindow,
+  XMapWindow,
+  XCreateImage,
+  XDefaultGC,
+  XPutPixel,
+  XPutImage,
+  XSelectInput,
+  XPending,
+  XNextEvent
+);
+
+define int16
+  WIDTH=256,
+  HEIGHT=192;
+
+define uint8
+  ZPixmap=2,
+  KeyPress=2,
+  KeyRelease=3,
+  KeyPressMask=1,
+  KeyReleaseMask=2,
+  color[
+    0,0,0,
+    0,0,192,
+    192,0,0,
+    192,0,192,
+    0,192,0,
+    0,192,192,
+    192,192,0,
+    192,192,192,
+    32,32,32,
+    0,0,255,
+    255,0,0,
+    255,0,255,
+    0,255,0,
+    0,255,255,
+    255,255,0,
+    255,255,255
+  ];
+
+pointer
+  head="012345678901234567890123456789",
+  display,
+  gc,
+  image;
+
+int64
+  window,
+  sound;
+
+int16 width,height;
+
+uint8
+  keys[255,255,255,255,255,255,255,255],
+  bsound[0,0],
+  event[
+    0,0,0,0,            //type      0
+    0,0,0,0,0,0,0,0,    //serial    4
+    0,                  //sendevent 12
+    0,0,0,0,0,0,0,0,    //display   13
+    0,0,0,0,0,0,0,0,    //window    21
+
+    0,0,0,0,0,0,0,0,    //root      29
+    0,0,0,0,0,0,0,0,    //subwindow 37
+    0,0,0,0,0,0,0,0,    //time      45
+    0,0,0,0,            //x         53
+    0,0,0,0,            //y         57
+    0,0,0,0,            //x root    61
+    0,0,0,0,            //y root    65
+    0,0,0,0,            //state     69
+    0,0,0,0,            //keycode   73
+    0,                  //same screen 74
+
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0
+
+  ];
+
+
+function in (uint16 p;) {
+  uint8 r=0xff;
+
+  if (p&0xff=0xfe) {
+    if (p&0x8000=0) r:=r&keys[0,uint8];
+    if (p&0x4000=0) r:=r&keys[1,uint8];
+    if (p&0x2000=0) r:=r&keys[2,uint8];
+    if (p&0x1000=0) r:=r&keys[3,uint8];
+    if (p&0x0800=0) r:=r&keys[4,uint8];
+    if (p&0x0400=0) r:=r&keys[5,uint8];
+    if (p&0x0200=0) r:=r&keys[6,uint8];
+    if (p&0x0100=0) r:=r&keys[7,uint8];
+  }
+  p:=r;
+}
+
+function out (;uint16 p,uint8 v) {
+  if (p=0xfe) {
+    if (v&0x10<>0) bsound[uint16]:=0x8000;
+    else bsound[uint16]:=0x0000;
+    system.write (sound,bsound,2);
+  }
+}
+
+function load (;pointer n) {
+  int64 file;
+  uint16 a;
+  uint8 c;
+  
+  file:=system.open (n,system.O_RDONLY,0);
+  system.read (file,head,30);
+  z80._A:=head[uint8];z80._F:=head[1,uint8];
+  z80._C:=head[2,uint8];z80._B:=head[3,uint8];
+  z80._L:=head[4,uint8];z80._H:=head[5,uint8];
+  z80._PC:=z80.get16 (head[7,uint8],head[6,uint8]);
+  z80._SP:=z80.get16 (head[9,uint8],head[8,uint8]);
+  z80._I:=head[10,uint8];z80._R:=z80._R&0x80|head[11,uint8]&0x7f;
+  c:=head[12,uint8]&0x20;
+  z80._E:=head[13,uint8];z80._D:=head[14,uint8];
+  z80.__C:=head[15,uint8];z80.__B:=head[16,uint8];
+  z80.__E:=head[17,uint8];z80.__D:=head[18,uint8];
+  z80.__L:=head[19,uint8];z80.__H:=head[20,uint8];
+  z80.__A:=head[21,uint8];z80.__F:=head[22,uint8];
+  z80._IY:=z80.get16 (head[24,uint8],head[23,uint8]);
+  z80._IX:=z80.get16 (head[26,uint8],head[25,uint8]);
+  if (head[27,uint8]<>0) z80._IFF1:=1;
+  else z80._IFF1:=0;
+  if (head[28,uint8]<>0) z80._IFF2:=1;
+  else z80._IFF2:=0;
+  z80._IM:=head[29,uint8]&0x3;
+  if (z80._PC=0) {
+    string.write (system.out,"Format not supported.\n");
+    break load;
+  }
+  a:=16384;
+  do {
+    if (a&0xffff=0) break;
+    if (system.read (file,head,1)=0) break;
+    if (c<>0 and head[uint8]=0xed) {
+      system.read (file,head,1);
+      if (head[uint8]<>0xed) {
+        z80.memory[a,uint8]:=0xed;
+        a:=a+1;
+        z80.memory[a,uint8]:=head[uint8];
+        a:=a+1;
+      } else {
+        system.read (file,head,2);
+        do {
+          if (head[uint8]=0) break;
+          z80.memory[a,uint8]:=head[1,uint8];
+          a:=a+1;
+          head[uint8]:=head[uint8]-1;
+          continue;
+        }
+      }
+    } else {
+      z80.memory[a,uint8]:=head[uint8];
+      a:=a+1;
+    }
+    continue;
+  }
+  system.close (file);
+}
+
+function updateKey (;) {
+  int32 k;
+  
+  do {
+    if (ccall (display,XPending)=0) break;
+    ccall (event,display,XNextEvent);
+    if (event[uint32]=KeyPress) {
+      k:=event[84,uint32];
+      if (k<38) {
+        if (k<19) {
+          if (k<15) {
+            
+            if (k=10) keys[4,uint8]:=keys[4,uint8]&~0x01;         //1
+            else if (k=11) keys[4,uint8]:=keys[4,uint8]&~0x02;    //2
+            else if (k=12) keys[4,uint8]:=keys[4,uint8]&~0x04;    //3
+            else if (k=13) keys[4,uint8]:=keys[4,uint8]&~0x08;    //4
+            else keys[4,uint8]:=keys[4,uint8]&~0x10;              //5
+
+          } else if (k=15) keys[3,uint8]:=keys[6,uint8]&~0x10;    //6
+          else {
+
+            if (k=16) keys[3,uint8]:=keys[3,uint8]&~0x08;         //7
+            else if (k=17) keys[3,uint8]:=keys[3,uint8]&~0x04;    //8
+            else keys[3,uint8]:=keys[3,uint8]&~0x02;              //9
+
+          }
+        } else if (k=19) keys[3,uint8]:=keys[3,uint8]&~0x01;      //0
+        else {
+          if (k<33) {
+            if (k<28) {
+
+              if (k=24) keys[5,uint8]:=keys[5,uint8]&~0x01;       //Q
+              else if (k=25) keys[5,uint8]:=keys[5,uint8]&~0x02;  //W
+              else if (k=26) keys[5,uint8]:=keys[5,uint8]&~0x04;  //E
+              else if (k=27) keys[5,uint8]:=keys[5,uint8]&~0x08;  //R
+              else if (k=22) {                                    //DELETE
+                keys[7,uint8]:=keys[7,uint8]&~0x01;
+                keys[3,uint8]:=keys[3,uint8]&~0x01;
+              }
+
+            } else if (k=28) keys[5,uint8]:=keys[5,uint8]&~0x10;  //T
+            else {
+
+              if (k=29) keys[2,uint8]:=keys[2,uint8]&~0x10;       //Y
+              else if (k=30) keys[2,uint8]:=keys[2,uint8]&~0x08;  //U
+              else if (k=31) keys[2,uint8]:=keys[2,uint8]&~0x04;  //I
+              else keys[2,uint8]:=keys[2,uint8]&~0x02;            //O
+
+            }
+          } else if (k=33) keys[2,uint8]:=keys[2,uint8]&~0x01;    //P
+          else if (k=36) keys[1,uint8]:=keys[1,uint8]&~0x01;      //ENTER
+        }
+      } else if (k=38) keys[6,uint8]:=keys[6,uint8]&~0x01;        //A
+      else {
+        if (k<46) {
+          if (k<42) {
+
+            if (k=39) keys[6,uint8]:=keys[6,uint8]&~0x02;         //S
+            else if (k=40) keys[6,uint8]:=keys[6,uint8]&~0x04;    //D
+            else keys[6,uint8]:=keys[6,uint8]&~0x08;              //F
+            
+          } else if (k=42) keys[6,uint8]:=keys[6,uint8]&~0x10;    //G
+          else {
+            if (k=43) keys[1,uint8]:=keys[1,uint8]&~0x10;         //H
+            else if (k=44) keys[1,uint8]:=keys[1,uint8]&~0x08;    //J
+            else keys[1,uint8]:=keys[1,uint8]&~0x04;              //K
+          }
+        } else if (k=46) keys[1,uint8]:=keys[1,uint8]&~0x02;      //L
+        else {
+          if (k<56) {
+
+            if (k=50) keys[7,uint8]:=keys[7,uint8]&~0x01;         //CAPS SHIFT
+            else if (k=52) keys[7,uint8]:=keys[7,uint8]&~0x02;    //Z
+            else if (k=53) keys[7,uint8]:=keys[7,uint8]&~0x04;    //X
+            else if (k=54) keys[7,uint8]:=keys[7,uint8]&~0x08;    //C
+            else if (k=55) keys[7,uint8]:=keys[7,uint8]&~0x10;    //V
+
+          } else if (k=56) keys[0,uint8]:=keys[0,uint8]&~0x10;    //B
+          else {
+
+            if (k=57) keys[0,uint8]:=keys[0,uint8]&~0x08;         //N
+            else if (k=58) keys[0,uint8]:=keys[0,uint8]&~0x04;    //M
+            else if (k=62) keys[0,uint8]:=keys[0,uint8]&~0x02;    //SIMBOL SHIFT
+            else if (k=65) keys[0,uint8]:=keys[0,uint8]&~0x01;    //SPACE
+            else if (k=113) {                                     //LEFT
+              keys[7,uint8]:=keys[7,uint8]&~0x01;
+              keys[4,uint8]:=keys[4,uint8]&~0x10;
+            } else if (k=114) {                                   //RIGHT
+              keys[7,uint8]:=keys[7,uint8]&~0x01;
+              keys[3,uint8]:=keys[3,uint8]&~0x04;
+            } else if (k=111) {                                   //UP
+              keys[7,uint8]:=keys[7,uint8]&~0x01;
+              keys[3,uint8]:=keys[3,uint8]&~0x08;
+            } else if (k=116) {                                   //DOWN
+              keys[7,uint8]:=keys[7,uint8]&~0x01;
+              keys[3,uint8]:=keys[3,uint8]&~0x10;
+            }
+
+          }
+        }
+      }
+    } else if (event[uint32]=KeyRelease) {
+      k:=event[84,uint32];
+      if (k<38) {
+        if (k<19) {
+          if (k<15) {
+            
+            if (k=10) keys[4,uint8]:=keys[4,uint8]|0x01;         //1
+            else if (k=11) keys[4,uint8]:=keys[4,uint8]|0x02;    //2
+            else if (k=12) keys[4,uint8]:=keys[4,uint8]|0x04;    //3
+            else if (k=13) keys[4,uint8]:=keys[4,uint8]|0x08;    //4
+            else keys[4,uint8]:=keys[4,uint8]|0x10;              //5
+
+          } else if (k=15) keys[3,uint8]:=keys[6,uint8]|0x10;    //6
+          else {
+
+            if (k=16) keys[3,uint8]:=keys[3,uint8]|0x08;         //7
+            else if (k=17) keys[3,uint8]:=keys[3,uint8]|0x04;    //8
+            else keys[3,uint8]:=keys[3,uint8]|0x02;              //9
+
+          }
+        } else if (k=19) keys[3,uint8]:=keys[3,uint8]|0x01;      //0
+        else {
+          if (k<33) {
+            if (k<28) {
+
+              if (k=24) keys[5,uint8]:=keys[5,uint8]|0x01;       //Q
+              else if (k=25) keys[5,uint8]:=keys[5,uint8]|0x02;  //W
+              else if (k=26) keys[5,uint8]:=keys[5,uint8]|0x04;  //E
+              else if (k=27) keys[5,uint8]:=keys[5,uint8]|0x08;  //R
+              else if (k=22) {                                   //DELETE
+                keys[7,uint8]:=keys[7,uint8]|0x01;
+                keys[3,uint8]:=keys[3,uint8]|0x01;
+              }
+
+            } else if (k=28) keys[5,uint8]:=keys[5,uint8]|0x10;  //T
+            else {
+
+              if (k=29) keys[2,uint8]:=keys[2,uint8]|0x10;       //Y
+              else if (k=30) keys[2,uint8]:=keys[2,uint8]|0x08;  //U
+              else if (k=31) keys[2,uint8]:=keys[2,uint8]|0x04;  //I
+              else keys[2,uint8]:=keys[2,uint8]|0x02;            //O
+
+            }
+          } else if (k=33) keys[2,uint8]:=keys[2,uint8]|0x01;    //P
+          else if (k=36) keys[1,uint8]:=keys[1,uint8]|0x01;      //ENTER
+        }
+      } else if (k=38) keys[6,uint8]:=keys[6,uint8]|0x01;        //A
+      else {
+        if (k<46) {
+          if (k<42) {
+
+            if (k=39) keys[6,uint8]:=keys[6,uint8]|0x02;         //S
+            else if (k=40) keys[6,uint8]:=keys[6,uint8]|0x04;    //D
+            else keys[6,uint8]:=keys[6,uint8]|0x08;              //F
+            
+          } else if (k=42) keys[6,uint8]:=keys[6,uint8]|0x10;    //G
+          else {
+            if (k=43) keys[1,uint8]:=keys[1,uint8]|0x10;         //H
+            else if (k=44) keys[1,uint8]:=keys[1,uint8]|0x08;    //J
+            else keys[1,uint8]:=keys[1,uint8]|0x04;              //K
+          }
+        } else if (k=46) keys[1,uint8]:=keys[1,uint8]|0x02;      //L
+        else {
+          if (k<56) {
+
+            if (k=50) keys[7,uint8]:=keys[7,uint8]|0x01;         //CAPS SHIFT
+            else if (k=52) keys[7,uint8]:=keys[7,uint8]|0x02;    //Z
+            else if (k=53) keys[7,uint8]:=keys[7,uint8]|0x04;    //X
+            else if (k=54) keys[7,uint8]:=keys[7,uint8]|0x08;    //C
+            else if (k=55) keys[7,uint8]:=keys[7,uint8]|0x10;    //V
+
+          } else if (k=56) keys[0,uint8]:=keys[0,uint8]|0x10;    //B
+          else {
+
+            if (k=57) keys[0,uint8]:=keys[0,uint8]|0x08;         //N
+            else if (k=58) keys[0,uint8]:=keys[0,uint8]|0x04;    //M
+            else if (k=62) keys[0,uint8]:=keys[0,uint8]|0x02;    //SIMBOL SHIFT
+            else if (k=65) keys[0,uint8]:=keys[0,uint8]|0x01;    //SPACE
+            else if (k=113) {                                     //LEFT
+              keys[7,uint8]:=keys[7,uint8]|0x01;
+              keys[4,uint8]:=keys[4,uint8]|0x10;
+            } else if (k=114) {                                   //RIGHT
+              keys[7,uint8]:=keys[7,uint8]|0x01;
+              keys[3,uint8]:=keys[3,uint8]|0x04;
+            } else if (k=111) {                                   //UP
+              keys[7,uint8]:=keys[7,uint8]|0x01;
+              keys[3,uint8]:=keys[3,uint8]|0x08;
+            } else if (k=116) {                                   //DOWN
+              keys[7,uint8]:=keys[7,uint8]|0x01;
+              keys[3,uint8]:=keys[3,uint8]|0x10;
+            }
+
+          }
+        }
+      }
+    }
+    continue;
+  }
+}
+
+function updateImage (;) {
+  uint32 co;
+  uint16 a=16348,b,c,x,y,ink,back;
+  
+  do {
+    if (a>22527) break;
+    y:=shr (a&0x00e0,2)+shr (a&0x0700,8)+shr (a&0x1800,5);
+    c:=z80.memory[22528+(a&0x1f)+shl (shr (y,3),5),uint8];
+    ink:=(c&0x07)|(shr (c,3)&0x8);
+    back:=(shr (c,3)&0x0f);
+    y:=shl (y,1);
+    x:=shl (a&0x1f,4);
+    c:=z80.memory[a,uint8];
+    b:=0x80;
+    do {
+      if (b=0) break;
+      if (c&b<>0) co:=ink;
+      else co:=back;
+      co:=0xff000000|shl (color[co*3,uint8],16)|
+        shl (color[co*3+1,uint8],8)|color[co*3+2,uint8];
+      ccall (co,y,x,image,XPutPixel);
+      ccall (co,y,x+1,image,XPutPixel);
+      ccall (co,y+1,x,image,XPutPixel);
+      ccall (co,y+1,x+1,image,XPutPixel);
+      b:=shr (b,1);
+      x:=x+2;
+      continue;
+    }
+    a:=a+1;
+    continue;
+  }
+}
+
+function initScreen (;) {
+  pointer p,v;
+  int64 r;
+  int16 c,x,y;
+  
+  width:=shl (WIDTH,1);height:=shl (HEIGHT,1);
+  display:=ccall (0,XOpenDisplay);
+  v:=ccall (0,display,XDefaultVisual);
+  c:=ccall (0,display,XDefaultDepth);
+  r:=ccall (display,XDefaultRootWindow);
+  window:=ccall (0,0,1,height,width,50,50,r,display,XCreateSimpleWindow);
+  ccall (KeyPressMask|KeyReleaseMask,window,display,XSelectInput);
+  ccall (window,display,XMapWindow);
+  p:=system.memory (width*height*c);
+  image:=ccall (0,32,height,width,p,0,ZPixmap,c,v,display,XCreateImage);
+  gc:=ccall (0,display,XDefaultGC);
+}
+
+function main (int8 code;
+    int64 parameters,pointer parameter,pointer enviroment) {
+  int64 rom,n,m;
+
+  z80.memory:=system.memory (0x10000);
+  rom:=system.open ("48.rom",system.O_RDONLY,0);
+  n:=system.seek (rom,0,system.SEEK_END);
+  system.seek (rom,0,system.SEEK_SET);
+  system.read (rom,z80.memory,n);
+  system.close (rom);
+  sound:=system.open ("/dev/dsp",system.O_WRONLY,511);
+  z80.pin:=in;
+  z80.pout:=out;
+  
+  string.hexDigit:=6;
+
+  initScreen ();    
+  z80.initZ80 ();
+  
+  if (parameters=2) load (parameter+string.length (parameter)+1);
+  n:=0;
+  do {
+    m:=0;do {m:=m+1;if (m<40) continue;}
+    z80.step ();
+    n:=n+1;
+    if (n=40000) {
+      n:=0;
+      updateKey ();
+      updateImage ();
+      ccall (height,width,0,0,0,0,image,gc,window,display,XPutImage);
+      z80.interrupt (0xff);
+    }
+    continue;
+  }
+}
