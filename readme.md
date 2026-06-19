@@ -114,7 +114,7 @@ function main (int8 code;
 }
 ```
 
-Como puede se ve en este ejemplo, los identificadores pueden incluir el "punto".
+Como se ve en este ejemplo, los identificadores pueden incluir el "punto".
 
 Pero para que pueda verse que se puede hacer algo un poco mas, he escrito un emulador de z80 que pasa los test de las
 instrucciones documentadas y no documentadas de este procesador, y un modulo de spectrum que emula la pantalla y teclas
