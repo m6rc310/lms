@@ -1,0 +1,1737 @@
+/*
+**  Autocompilador de "lenguaje modular simple" lmsc
+**  genera codigo para x86 amd64
+*/
+/*
+    Este codigo es parte de "lmsc"
+    Copyright (C) 2026  Marcelo Reina Aguilar
+
+    Este programa es software libre: usted puede redistribuirlo y/o modificarlo
+    bajo los términos de la Licencia Pública General de GNU publicada por
+    la Fundación para el Software Libre, ya sea la versión 3 de la Licencia,
+    o (a su elección) cualquier versión posterior.
+
+    Este programa se distribuye con la esperanza de que sea útil, pero
+    SIN NINGUNA GARANTÍA; ni siquiera la garantía implícita de
+    COMERCIABILIDAD o IDONEIDAD PARA UN FIN DETERMINADO. Consulte la
+    Licencia Pública General de GNU para más detalles.
+
+    Debería haber recibido una copia de la Licencia Pública General de GNU
+    junto con este programa. En caso contrario, consulte <https://www.gnu.org/licenses/>.
+*/
+
+unit lmsc;
+
+import system (
+  write:0:3,
+  read:1:2,
+  memory:1:0,
+  open:1:2,
+  close:0:1,
+  int64 out,
+  int64 O_RDONLY,
+  int64 O_WRONLY,
+  int64 O_CREAT,
+  int64 O_TRUNC
+);
+
+import string (
+  compare:1:1,
+  copy:0:2,
+  concat:0:2,
+  length:1:0,
+  indexOfChar:1:1,
+  write:0:2,
+  hexadecimal:1:0,
+  decimal:1:0,
+  decimalToInt:1:0
+);
+
+functions
+  syntaxExpression:1:0,
+  syntaxBraces:1:2,
+  syntaxStatement:1:0,
+  syntaxPrimaryExpression:1:0;
+
+define int16
+  TokenLength=256,
+  Param1=254,
+  Param2=255,
+
+  ObjectsNumber=4096,
+  LineLength=1024;
+
+define int8
+  Space=0,
+  Number=1,
+  Letter=2,
+  Other=3,
+
+  INT8=1,
+  UINT8=2,
+  INT16=3,
+  UINT16=4,
+  INT32=5,
+  UINT32=6,
+  INT64=7,
+  UINT64=7,
+  FLOAT32=8,
+  FLOAT64=9,
+  POINTER=10,
+  LABEL=11,
+
+  EXTERN=16;
+
+define pointer
+ COMMENT=  "\n",
+ CONS=	   "  .cons#",
+ ETQ=      ".l#:",
+ LABEL_ASM="#:",
+ LMAIN=    "#_main:",
+
+ EXTERN_ASM=  "extern #",
+
+ MOVRCONS=   "  mov rax,.cons#",
+ NOP=    "",
+ PUSHA=   "  push rax",
+ PUSHR=   "  push qword [rdi]",
+ PUSHM=   "  push qword [#]",
+ PUSHSP=  "  push qword [rsp+#]",
+ POPA=    "  pop rax",
+ POP1=    "  pop rdi",
+ POP2=    "  pop rcx",
+ CMP=     "  cmp rdi,rax",
+ SAR0=    "  sar rax,cl",
+ SHL0=    "  shl rax,cl",
+ SHR0=    "  shr rax,cl",
+ IMUL0=   "  imul qword [rsp]",
+ IDIV0=   "  idiv qword [rsp]",
+ MOV0=    "  mov [rsp],rax",
+ MOV1=    "  mov [rsp],rdx",
+ MOV8=    "  mov [rdi],al",
+ MOV_8=   "  mov al,[rdi]",
+ MOV_16=  "  mov ax,[rdi]",
+ MOV_32=  "  mov eax,[rdi]",
+ MOVA8=   "  mov rax,[rsp+8]",
+ MOV16=   "  mov [rdi],ax",
+ MOV32=   "  mov [rdi],eax",
+ MOV64=   "  mov [rdi],rax",
+ MOVI8=   "  mov [#],al",
+ MOVI16=  "  mov [#],ax",
+ MOVI32=  "  mov [#],eax",
+ MOVI64=  "  mov [#],rax",
+ MOVE64=  "  mov [rsp+#],rax",
+ MOVAL=   "  mov al,#\n  movsx rax,al",
+ MOVAX=   "  mov ax,#\n  movsx rax,ax",
+ MOVEA=   "  mov eax,#\n  movsx rax,eax",
+ MOVALU=  "  xor rax,rax\n  mov al,#",
+ MOVAXU=  "  xor rax,rax\n  mov ax,#",
+ MOVEAU=  "  xor rax,rax\n  mov eax,#",
+ MOVRA=   "  mov rax,#",
+ MOVRASP= "  mov rax,[rsp+#]",
+ XOR0=    "  xor rdx,rdx",
+ XOR1=    "  xor rax,rcx",
+ XORA=    "  xor rax,rax",
+ AND0=    "  and [rsp],rax",
+ ANDI=    "  and rax,#",
+ ADD0=    "  add [rsp],rax",
+ OR0=     "  or [rsp],rax",
+ SUB0=    "  sub [rsp],rax",
+ CALL0=   "  call #",
+ CALLRSP= "  call [rsp+#]",
+ STACK=   "  add rsp,#",
+ STACKA=  "  add rsp,8",
+ NEG0=    "  neg qword [rsp]",
+ NOT0=    "  not qword [rsp]",
+ MOVSXAL= "  movsx rax,al",
+ MOVSXAX= "  movsx rax,ax",
+ MOVSXEA= "  movsx rax,eax",
+ RET0=    "  ret\n",
+ JMP0=    "  jmp near .l#",
+ DB0=     "  db #,0",
+ DBN=     "  db #",
+ DW0=     "  dw #",
+ DD0=     "  dd #",
+ DQ0=     "  dq #",
+ JE0=     "  je near .l#",
+ JNE0=    "  jne near .l#",
+ JL0=     "  jl near .l#",
+ JG0=     "  jg near .l#",
+ JLE0=    "  jle near .l#",
+ JGE0=    "  jge near .l#",
+ JA0=     "  ja near .l#",
+ JB0=     "  jb near .l#",
+ JAE0=    "  jae near .l#",
+ JBE0=    "  jbe near .l#",
+
+ LOAD_INT64=    "fild qword [rsp]",
+ LOAD_FLOAT64=  "fld qword [rsp]",
+ LOAD_FLOAT32=  "fld dword [rsp]",
+ STORE_INT64=   "fistp qword [rsp]",
+ STORE_FLOAT64= "fstp qword [rsp]",
+ STORE_FLOAT32= "fstp dword [rsp]",
+ F64ADD=        "fadd qword [rsp]",
+ F32ADD=        "fadd dword [rsp]",
+ FIADD=         "fild qword [rsp]\nfaddp",
+ F64SUB=        "fsubr qword [rsp]",
+ F32SUB=        "fsubr dword [rsp]",
+ FISUB=         "fild qword [rsp]\nfsubrp",
+
+ F64MUL=        "fmul qword [rsp]",
+ F32MUL=        "fmul dword [rsp]",
+ FIMUL=         "fild qword [rsp]\nfmulp",
+ F64DIV=        "fdivr qword [rsp]",
+ F32DIV=        "fdivr dword [rsp]",
+ FIDIV=         "fild qword [rsp]\nfdivrp",
+
+ POWER=         "fyl2x\nfld st0\nfrndint\nfsubr st1\nf2xm1\nfld1\nfaddp st1\nfscale\nfstp qword [rsp]",
+ LOG1=          "fldl2t\nfld1",
+ LOG2=          "fyl2x\nfdivrp st1\nfstp qword [rsp]",
+
+ UNIT=	  ";unit # ",
+ TEXT=    "\nBITS 64\nSECTION .text",
+ DATA=    "\nBITS 64\nSECTION .data",
+ GLOBAL0= "GLOBAL #_main",
+ GLOBAL=  "GLOBAL #",
+ EXIT=    "  add rsp,24\n  mov rdi,[rsp]\n  mov rax,60\n  syscall\n",
+ CALLS=   "  mov rdi,[rsp]\n  lea rsi,[rsp+8]\n  lea rax,[rsi+rdi*8+8]\n  push qword 0\n  push rdi\n  push qword [rsi]\n  push rax\n  call #.main",
+ CCALL0=   "ccall:\n  mov rbp,0x8\n  test rsp,0xf\n  jnz .align\n    mov rbp,0x10\n    push rbp\n.align:\n  push rbp",
+ CCALL1=   "  mov rax,[rsp+rbp+0x58]\n  push rax\n  mov rax,[rsp+rbp+0x58]\n  push rax\n  mov rax,[rsp+rbp+0x58]\n  push rax\n  mov rax,[rsp+rbp+0x58]\n  push rax\n  mov r9,[rsp+rbp+0x58]\n  mov r8,[rsp+rbp+0x50]",
+ CCALL2=   "  mov rcx,[rsp+rbp+0x48]\n  mov rdx,[rsp+rbp+0x40]\n  mov rsi,[rsp+rbp+0x38]\n  mov rdi,[rsp+rbp+0x30]\n  mov rax,[rsp+rbp+0x28]\n  call rax\n  mov rbp,[rsp+0x20]\n  add rbp,0x20\n  add rsp,rbp\n  ret";
+
+int64 fileSource,fileNASM,lineNumber;
+
+pointer
+  tk,
+  token,
+  stringBuffer,
+  line,
+  unitName,
+  externalUnit,
+  blockName,
+  blockLabel,
+  variableName,
+  variableType,
+  globalName,
+  globalType,
+  bufferCharacter,
+  unreadCharacter,
+  unreadToken,
+  nasm,
+  param,
+  comment,
+  useCCALL;
+
+int16
+  tokenIndex,
+  numberOfExternalUnits,
+  variableIndex,
+  globalIndex,
+  actualLabel,
+  labelIndex,
+  blockIndex;
+
+function writeASM (;pointer a,pointer p,pointer c) {
+  int16 l;
+
+  if (string.compare (a,NOP)=0) break writeASM;
+  if (string.compare (nasm,PUSHA)=0 and string.compare (a,POPA)=0) {
+    string.copy (nasm,";push rax\n;pop rax");
+    break writeASM;
+  }
+  l:=string.indexOfChar (nasm,'#');
+  if (l=-1) {
+    string.write (fileNASM,nasm);
+    string.write (fileNASM,comment);
+  } else {
+    system.write (fileNASM,nasm,l);
+    string.write (fileNASM,param);
+    string.write (fileNASM,nasm+l+1);
+    string.write (fileNASM,comment);
+  }
+  string.copy (nasm,a);
+  string.copy (param,p);
+  comment:=c;
+}
+
+function type (int8 c;) {
+  if ('0'<=c and c<='9') c:=Number;
+  else if ('a'<=c and c<='z' or 'A'<=c and c<='Z' or c='_' or c='.') c:=Letter;
+  else if (c=' ' or c='\t' or c='\r' or c='\n') c:=Space;
+  else c:=Other;
+}
+
+function varASM (;int8 t) {
+  if (t=INT8 or t=UINT8) writeASM (DBN,NOP,NOP);
+  else if (t=INT16 or t=UINT16) writeASM (DW0,NOP,NOP);
+  else if (t=INT32 or t=UINT32 or t=FLOAT32) writeASM (DD0,NOP,NOP);
+  else if (t=INT64 or t=FLOAT64 or t=POINTER) writeASM (DQ0,NOP,NOP);
+}
+
+function movR (;int8 t,pointer p) {
+  if (t=INT8) writeASM (MOVAL,p,COMMENT);
+  else if (t=UINT8) writeASM (MOVALU,p,COMMENT);
+  else if (t=INT16) writeASM (MOVAX,p,COMMENT);
+  else if (t=UINT16) writeASM (MOVAXU,p,COMMENT);
+  else if (t=INT32) writeASM (MOVEA,p,COMMENT);
+  else if (t=UINT32 or t=FLOAT32) writeASM (MOVEAU,p,COMMENT);
+  else if (t=INT64 or t=FLOAT64 or t=POINTER) writeASM (MOVRA,p,COMMENT);
+}
+
+function varType (int8 r;pointer t) {
+  r:=0;
+  if (string.compare (t,"int8")=0) r:=INT8;
+  else if (string.compare (t,"int16")=0) r:=INT16;
+  else if (string.compare (t,"int32")=0) r:=INT32;
+  else if (string.compare (t,"uint8")=0) r:=UINT8;
+  else if (string.compare (t,"uint16")=0) r:=UINT16;
+  else if (string.compare (t,"uint32")=0) r:=UINT32;
+  else if (string.compare (t,"int64")=0 or string.compare (t,"uint64")=0)
+    r:=INT64;
+  else if (string.compare (t,"uint64")=0) r:=INT64;
+  else if (string.compare (t,"float32")=0) r:=FLOAT32;
+  else if (string.compare (t,"float64")=0) r:=FLOAT64;
+  else if (string.compare (t,"pointer")=0) r:=POINTER;
+}
+
+function unread (int8 c;pointer p) {
+  int8 b;
+
+  b:=p[int8]; p[int8]:=c; c:=b;
+}
+
+function readCharacter (int8 c;) {
+  int16 l;
+  
+  c:=unread (0,unreadCharacter);
+  if (c=0) {
+    l:=system.read (fileSource,bufferCharacter,1);
+    if (l=0) c:=0;
+    else c:=bufferCharacter[int8];
+    if (c='\n') {
+      lineNumber:=lineNumber+1;
+      line[int8]:=0;
+    } else {
+      l:=string.length (line);
+      line[l,int8]:=c;
+      line[l+1,int8]:=0;
+    }
+  }
+}
+
+function readToken (;) {
+  int8 t,c;
+  int16 i;
+
+  if (unread (0,unreadToken)<>0) break readToken;
+  do tokenMain {
+    do {
+      c:=readCharacter (0);
+      if (type (c)=Space) continue;
+    }
+    if (c='/') {
+      c:=readCharacter (0);
+      if (c='*') {
+        do {
+          c:=readCharacter (0);
+          if (c<>'*') continue;
+          c:=readCharacter (0);
+          if (c='/') continue tokenMain;
+          unread (c,unreadCharacter);
+          continue;
+        }
+      } else if (c='/') {
+        c:=readCharacter (0);
+        if (c='\n') continue tokenMain;
+        continue;
+      } else {
+        unread (c,unreadCharacter);
+        c:='/';
+        break tokenMain;
+      }
+    } else break tokenMain;
+    continue;
+  }
+  tk[int8]:=c;
+  i:=1;
+  if (c='\"' or c='\'') {
+    c:=readCharacter (0);
+    tk[i,int8]:=c;
+    i:=i+1;
+    if (c<>tk[int8] or tk[i-2,int8]='\\' and i>=3 and tk[i-3,int8]<>'\\')
+      continue;
+  } else if (type (c)<>Other) {
+    c:=readCharacter (0);
+    tk[i,int8]:=c;
+    i:=i+1;
+    t:=type (c);
+    if (tk[int8]<>'.' and t<>Space and t<>Other and
+        [type (tk[int8])<>Number or t<>Letter]) continue;
+    i:=i-1;
+    unread (c,unreadCharacter);
+  }
+  tk[i,int8]:=0;
+}
+
+function parseString (pointer s;) {
+  
+  if (s[int8]='\"' or s[int8]='\'') {
+    s[int8]:=96;												//'`'
+    s[string.length (s)-1,int8]:=96;	//'`'	
+  }
+}
+
+function find (int64 n;pointer v,pointer s) {
+  int64 i=0;
+
+  do {
+    if (i>=n) break;
+    if (string.compare (s,v+i*TokenLength)=0) {
+      n:=i;
+      break find;
+    }
+    i:=i+1;
+    continue;
+  }
+  n:=-1;
+}
+
+function syntaxNumber (int8 r;) {
+  int64 e=0,b;
+  float64 f=0,c=0.1E0;
+  float32 g;
+  int16 it=tokenIndex;
+  int8 d,i,p,s,f32=0;
+
+  d:=r;
+  b:=0;r:=0;
+  if (tk[int8]=39) {
+    if (d<>0) writeASM (tk,NOP,NOP);
+    else {
+	    writeASM (MOVRA,parseString (tk),COMMENT);
+	    writeASM (PUSHA,NOP,COMMENT);
+      variableName[variableIndex*TokenLength,int8]:=0;
+      variableType[variableIndex,int8]:=POINTER;
+      variableIndex:=variableIndex+1;
+    }
+  } else {
+    s:=0;
+    if (type (tk[int8])=Letter) {
+      if (d<>0) {
+        b:=find (globalIndex,globalName,tk);
+        if (b=-1) break syntaxNumber;
+        string.copy (stringBuffer,unitName);
+        string.concat (stringBuffer,".");
+        string.concat (stringBuffer,tk);
+        writeASM (stringBuffer,NOP,NOP);
+      } else {
+	      writeASM (MOVRA,tk,COMMENT);
+	      writeASM (PUSHA,NOP,COMMENT);
+        variableName[variableIndex*TokenLength,int8]:=0;
+        variableType[variableIndex,int8]:=POINTER;
+        variableIndex:=variableIndex+1;
+      }
+    } else if (string.compare (tk,"+")=0) readToken ();
+    else if (string.compare (tk,"-")=0) {s:=-1;readToken ();}
+    if (type (tk[int8])=Number) {
+      i:=0;
+      do {
+        if (tk[i,int8]=0) break;
+        f:=f*10+tk[i,int8]-'0';
+        i:=i+1;
+        continue;
+      }
+      tokenIndex:=tokenIndex+TokenLength;
+      string.copy (token+it,tk);
+      readToken ();
+      if (tk[int8]='x' and token[it,int8]='0' and token[it+1,int8]=0) {
+        string.concat (token+it,tk);
+        if (d<>0) writeASM (token+it,NOP,NOP);
+			  else {
+				  writeASM (MOVRA,token+it,COMMENT);
+				  writeASM (PUSHA,NOP,COMMENT);
+        }
+        variableName[variableIndex*TokenLength,int8]:=0;
+        variableType[variableIndex,int8]:=INT64;
+        variableIndex:=variableIndex+1;
+        tokenIndex:=it;
+        r:=-1;
+        break syntaxNumber;
+      } else if (string.compare (tk,".")=0) {
+        b:=-1;
+        readToken ();
+        if (type (tk[int8])<>Number) break syntaxNumber;
+        string.concat (token+it,".");
+        i:=0;
+        do {
+          if (tk[i,int8]=0) break;
+          f:=f+(tk[i,int8]-'0')*c;
+          c:=c*0.1E0;
+          i:=i+1;
+          continue;
+        }
+        string.concat (token+it,tk);
+        readToken ();
+      }
+      if (tk[int8]='e' or tk[int8]='E') {
+        if (tk[int8]='e') f32:=-1;
+        b:=-1;
+        if (type (tk[1,int8])=Number) {
+          i:=1;
+          do {
+            if (tk[i,int8]=0) break;
+            e:=e*10+tk[i,int8]-'0';
+            i:=i+1;
+            continue;
+          }
+          f:=f*10E0^e;
+          string.concat (token+it,tk);
+        } else {
+          readToken ();
+          if (string.compare (tk,"+")<>0 and string.compare (tk,"-")<>0)
+            break syntaxNumber;
+          p:=tk[int8];
+          string.concat (token+it,tk);
+          readToken ();
+          if (type (tk)<>Number) break syntaxNumber;
+          i:=0;
+          do {
+            if (tk[i,int8]=0) break;
+            e:=e*10+tk[i,int8]-'0';
+            i:=i+1;
+            continue;
+          }
+          if (p='+') f:=f*10E0^e;
+          else f:=f*10E0^-e;
+          string.concat (token+it,tk);
+        }
+      } else unread (-1,unreadToken);
+      if (s<>0) f:=-f;
+      if (d<>0) {
+        if (s<>0) {
+				  string.copy (token+it+TokenLength+1,token+it);
+				  token[it+TokenLength,int8]:='-';
+				  writeASM (token[it+TokenLength,int8],NOP,NOP);
+        } else writeASM (token+it,NOP,NOP);
+      } else {
+        variableName[variableIndex*TokenLength,int8]:=0;
+        if (b=0) {
+          if (s<>0) {
+					  string.copy (token+it+TokenLength+1,token+it);
+					  token[it+TokenLength,int8]:='-';
+					  writeASM (MOVRA,token+it+TokenLength,COMMENT);
+          } else writeASM (MOVRA,token+it,COMMENT);
+				  writeASM (PUSHA,NOP,COMMENT);
+          variableType[variableIndex,int8]:=INT64;
+        } else {
+          if (f32<>0) {
+            g:=f;
+            string.copy (token+it+TokenLength,string.hexadecimal (g));
+            variableType[variableIndex,int8]:=FLOAT32;
+          } else {
+            string.copy (token+it+TokenLength,string.hexadecimal (f));
+            variableType[variableIndex,int8]:=FLOAT64;
+          }
+				  writeASM (MOVRA,token+it+TokenLength,COMMENT);
+				  writeASM (PUSHA,NOP,COMMENT);
+        }
+        variableIndex:=variableIndex+1;
+      }
+    }
+  }
+  tokenIndex:=it;
+  r:=-1;
+}
+
+function syntaxString (int8 r;) {
+  r:=0;
+  if (tk[int8]='\"') {
+		writeASM (JMP0,string.hexadecimal (labelIndex),COMMENT);
+    writeASM (CONS,string.hexadecimal (labelIndex),NOP);
+    writeASM (DB0,parseString (tk),COMMENT);
+    writeASM (ETQ,string.hexadecimal (labelIndex),COMMENT);
+    writeASM (MOVRCONS,string.hexadecimal (labelIndex),COMMENT);
+    writeASM (PUSHA,NOP,COMMENT);
+    variableName[variableIndex*TokenLength,int8]:=0;
+    variableType[variableIndex,int8]:=POINTER;
+    variableIndex:=variableIndex+1;
+    labelIndex:=labelIndex+1;
+    r:=-1;
+  }
+}
+
+function syntaxPartialParameter (int8 r;) {
+  int8 c=r,d,cr=0;
+
+  r:=0;
+  do {
+    readToken ();
+    d:=varType (0,tk);
+    if (d=0) break;
+    readToken ();
+    if (type (tk[int8])<>Letter) break syntaxPartialParameter;
+    string.copy (variableName+variableIndex*TokenLength,tk);
+    variableType[variableIndex,int8]:=d;
+    variableIndex:=variableIndex+1;
+    cr:=cr+1;
+    readToken ();
+    if (string.compare (tk,",")=0) continue;
+  }
+  globalName[globalIndex*TokenLength+c,uint8]:=cr;
+  r:=-1;
+}
+
+function syntaxParameter (int8 r;) {
+  r:=0;
+  if (syntaxPartialParameter (Param1)=0) break syntaxParameter;
+  if (string.compare (tk,";")<>0) break syntaxParameter;
+  if (syntaxPartialParameter (Param2)=0) break syntaxParameter;
+  r:=-1;
+}
+
+function syntaxBreakContinue (int8 r;pointer n) {
+  int16 b;
+  
+  r:=0;
+  if (string.compare (tk,n)<>0) break syntaxBreakContinue;
+  readToken ();
+  if (type (tk[int8])=Letter) {
+    b:=find (blockIndex,blockName,tk);
+    if (b=-1) break syntaxBreakContinue;
+    b:=blockLabel[shl (b,3),int64];
+    readToken ();
+  } else b:=actualLabel;
+  if (string.compare (tk,";")<>0) break syntaxBreakContinue;
+  if (n[int8]='c')
+    writeASM (JMP0,string.hexadecimal (b)," ;begin\n");
+  else writeASM (JMP0,string.hexadecimal (b+1)," ;end\n");
+  r:=-1;
+}
+
+function writeCondition (;pointer s,int16 l) {
+  writeASM (POPA,NOP,COMMENT);
+  writeASM (POP1,NOP,COMMENT);
+  writeASM (CMP,NOP,COMMENT);
+  writeASM (s,string.hexadecimal (l)," ;cond\n");
+  variableIndex:=variableIndex-2;
+}
+
+function syntaxPrimaryCondition (int8 r;int16 b) {
+  int8 c;
+  pointer s,ss;
+
+  c:=r;r:=0;
+  if (syntaxExpression (0)=0) break syntaxPrimaryCondition;
+  readToken ();
+  if (string.compare (tk,"carry")=0) {s:=JB0;ss:=JAE0;}
+  else if (string.compare (tk,"zero")=0) {s:=JE0;ss:=JNE0;}
+  else if (string.compare (tk,"<")=0) {
+    readToken ();
+    if (string.compare (tk,"=")=0) {s:=JLE0;ss:=JG0;}
+    else if (string.compare (tk,">")=0) {s:=JNE0;ss:=JE0;}
+    else if (string.compare (tk,"<")=0) {
+      readToken ();
+      if (string.compare (tk,"=")=0) {s:=JBE0;ss:=JA0;}
+      else {s:=JB0;ss:=JAE0;unread (-1,unreadToken);}
+    } else {s:=JL0;ss:=JGE0;unread (-1,unreadToken);}
+  } else if (string.compare (tk,">")=0) {
+    readToken ();
+    if (string.compare (tk,"=")=0) {s:=JGE0;ss:=JL0;}
+    else if (string.compare (tk,">")=0) {
+      readToken ();
+      if (string.compare (tk,"=")=0) {s:=JAE0;ss:=JB0;}
+      else {s:=JA0;ss:=JBE0;unread (-1,unreadToken);}
+    } else {s:=JG0;ss:=JLE0;unread (-1,unreadToken);}
+  } else if (string.compare (tk,"=")=0) {s:=JE0;ss:=JNE0;}
+  else break syntaxPrimaryCondition;
+  readToken ();
+  if (syntaxExpression (0)=0) break syntaxPrimaryCondition;
+  if (c<>0) s:=ss;
+  writeCondition (s,b);
+  r:=-1;
+}
+
+function syntaxNot (int8 r;int16 b,int16 el) {
+  int8 c;
+  
+  c:=r;r:=0;
+  if (string.compare (tk,"not")=0) {
+    readToken ();
+    if (string.compare (tk,"[")=0)
+    r:=syntaxBraces (~c,b,el);
+  } else r:=syntaxPrimaryCondition (~c,b);
+}
+
+function syntaxOrAnd (int8 r;int16 b,int16 el,int8 o) {
+  int8 c;
+  pointer oa,et;
+  int16 s;
+  
+  c:=r;r:=0;
+  if (o<>0) {oa:="or";et:=" ;or\n";}
+  else {oa:="and";et:=" ;and\n";}
+  do {
+    s:=labelIndex;
+    labelIndex:=labelIndex+1;
+    if (o<>0) {
+			if (syntaxOrAnd (c,b,s,0)=0) break syntaxOrAnd;
+    } else {
+			if (string.compare (tk,"[")=0) {
+        if (syntaxBraces (c,s,el)=0) break syntaxOrAnd;
+			} else if (string.compare (tk,"not")=0) {
+        if (syntaxNot (~c,el,s)=0) break syntaxOrAnd;
+      } else {
+				if (syntaxPrimaryCondition (~c,el)=0) break syntaxOrAnd;
+      }
+    }
+    writeASM (ETQ,string.hexadecimal (s)," ;orand\n");
+    readToken ();
+    if (string.compare (tk,oa)<>0) break;
+    readToken ();
+    continue;
+  }
+  unread (-1,unreadToken);
+  if (o<>0) writeASM (JMP0,string.hexadecimal (el)," ;else\n");
+  else writeASM (JMP0,string.hexadecimal (b)," ;if\n");
+  r:=-1;
+}
+
+function syntaxBraces (int8 r;int16 b,int16 el) {
+	int8 c;
+	
+  c:=r;r:=0;
+  if (string.compare (tk,"[")=0) {
+    readToken ();
+    if (syntaxOrAnd (c,b,el,-1)=0) break syntaxBraces;
+    readToken ();
+    if (string.compare (tk,"]")<>0) break syntaxBraces;
+    r:=-1;
+  }
+}
+
+function syntaxIf (int8 r;) {
+  int16 b,el,e;
+  
+  r:=0;
+  if (string.compare (tk,"if")<>0) break syntaxIf;
+  readToken ();
+  if (string.compare (tk,"(")<>0) break syntaxIf;
+  b:=labelIndex;
+  labelIndex:=labelIndex+1;
+  el:=labelIndex;
+  labelIndex:=labelIndex+1;
+  e:=labelIndex;
+  labelIndex:=labelIndex+1;
+  readToken ();
+  if (syntaxOrAnd (0,b,el,-1)=0) break syntaxIf;
+  writeASM (ETQ,string.hexadecimal (b)," ;if\n");
+  readToken ();
+  if (string.compare (tk,")")<>0) break syntaxIf;
+  readToken ();
+  if (syntaxStatement (0)=0) break syntaxIf;
+  readToken ();
+  if (string.compare (tk,"else")=0) {
+    writeASM (JMP0,string.hexadecimal (e)," ;fi\n");
+    writeASM (ETQ,string.hexadecimal (el)," ;else\n");
+    readToken ();
+    if (syntaxStatement (0)=0) break syntaxIf;
+  } else {
+    writeASM (ETQ,string.hexadecimal (el)," ;else\n");
+		unread (-1,unreadToken);
+	}
+  writeASM (ETQ,string.hexadecimal (e)," ;fi\n");
+  r:=-1;
+}
+
+function error (;pointer s) {
+  string.write (system.out,s);
+  string.write (system.out," line ");
+  string.write (system.out,string.decimal (lineNumber));
+  string.write (system.out,".\n-->");
+  string.write (system.out,line);
+  string.write (system.out,"<--\n");
+}
+
+function writeFunction (;pointer s,uint16 d) {
+  if (2<>d)
+    error ("warning: function parameters<>definition");
+  writeASM (POP2,NOP,COMMENT);
+  writeASM (POPA,NOP,COMMENT);  
+  writeASM (s,NOP,COMMENT);
+  writeASM (PUSHA,NOP,COMMENT);
+  variableIndex:=variableIndex-1;
+}
+
+function syntaxFunctionCall (int8 r;int16 c) {
+  int64 sl,f;
+  int8 /*k=0,*/ z=r;
+
+  r:=0;
+  sl:=variableIndex;
+  do {
+    readToken ();
+    if (string.compare (tk,")")=0) break;
+    if (syntaxExpression (0)=0) break syntaxFunctionCall;
+    readToken ();
+    if (string.compare (tk,")")=0) break;
+    if (string.compare (tk,",")<>0) break syntaxFunctionCall;
+    continue;
+  }
+  if (string.compare (token+c,"sar")=0) {
+		writeFunction (SAR0,variableIndex-sl);
+    r:=-1;
+    break syntaxFunctionCall;
+  } else if (string.compare (token+c,"shr")=0) {
+		writeFunction (SHR0,variableIndex-sl);
+    r:=-1;
+    break syntaxFunctionCall;
+  } else if (string.compare (token+c,"shl")=0) {
+		writeFunction (SHL0,variableIndex-sl);
+    r:=-1;
+    break syntaxFunctionCall;
+  } else if (string.compare (token+c,"xor")=0) {
+		writeFunction (XOR1,variableIndex-sl);
+    r:=-1;
+    break syntaxFunctionCall;
+  } else if (string.compare (token+c,"stack")=0) {
+    r:=-1;
+    break syntaxFunctionCall;
+  } else if (string.compare (token+c,"ccall")=0) {
+    writeASM (CALL0,token+c,COMMENT);
+    useCCALL:=1;
+    if (variableIndex<>sl+z) {
+      writeASM (STACK,string.hexadecimal (shl (variableIndex-sl-z,3)),COMMENT);
+      variableIndex:=sl+z;
+    }
+    writeASM (MOV0,NOP,COMMENT);
+    r:=-1;
+    break syntaxFunctionCall;
+  } else if (string.compare (token+c,"log")=0) {
+    if (1<>variableIndex-sl)
+      error ("warning: function parameters<>definition");
+    writeASM (LOG1,NOP,COMMENT);
+    if (variableType[variableIndex-1,int8]=FLOAT64)
+      writeASM (LOAD_FLOAT64,NOP,COMMENT);
+    else if (variableType[variableIndex-1,int8]=FLOAT32)
+      writeASM (LOAD_FLOAT32,NOP,COMMENT);
+    else writeASM (LOAD_INT64,NOP,COMMENT);
+    writeASM (LOG2,NOP,COMMENT);
+    r:=-1;
+    break syntaxFunctionCall;
+  }
+  f:=find (variableIndex,variableName,token+c);
+  if (f=-1) {
+    f:=find (globalIndex,globalName,token+c);
+    if (f=-1) break syntaxFunctionCall;
+    else {
+      if (z<>0 and globalName[f*TokenLength+Param1,uint8]<>0)
+        z:=globalName[f*TokenLength+Param1,uint8];
+      if (globalType[f,uint8]&~EXTERN<>POINTER) {
+        if (
+          globalName[f*TokenLength+Param1,uint8]+
+          globalName[f*TokenLength+Param2,uint8]<>variableIndex-sl
+        ) error ("warning: function parameters<>definition");
+      }
+      if (globalType[f,int8]&EXTERN=0) {
+ 	      string.copy (tk,unitName);
+        string.concat (tk,".");
+        string.concat (tk,token+c);
+      } else string.copy (tk,token+c);
+      if ((globalType[f,uint8]&~EXTERN)=LABEL) writeASM (CALL0,tk,COMMENT);
+      else if ((globalType[f,uint8]&~EXTERN)=POINTER) {
+        string.copy (stringBuffer,"[");
+        string.concat (stringBuffer,tk);
+        string.concat (stringBuffer,"]");
+        writeASM (CALL0,stringBuffer,COMMENT);
+      } else break syntaxFunctionCall;
+		}
+  } else writeASM (CALLRSP,
+    string.hexadecimal (shl (variableIndex-f-1,3)),COMMENT);
+  if (variableIndex<>sl+z) {
+		writeASM (STACK,string.hexadecimal (shl (variableIndex-sl-z,3)),COMMENT);
+    variableIndex:=sl+z;
+  }
+  r:=-1;
+}
+
+function syntaxPrimaryExpressionNoPointer (int8 r;) {
+  int64 sl;
+  int16 it=tokenIndex;
+  int8 p,c;
+
+  r:=0;
+  if (string.compare (tk,"+")=0) {
+    readToken ();
+    r:=syntaxPrimaryExpression (0);
+  } else if (string.compare (tk,"-")=0) {
+    readToken ();
+    r:=syntaxPrimaryExpression (0);
+    writeASM (NEG0,NOP,COMMENT);
+  } else if (string.compare (tk,"~")=0) {
+    readToken ();
+    r:=syntaxPrimaryExpression (0);
+    writeASM (NOT0,NOP,COMMENT);
+  } else if (string.compare (tk,"(")=0) {
+    readToken ();
+    if (syntaxExpression (0)=0)
+      break syntaxPrimaryExpressionNoPointer;
+    readToken ();
+    if (string.compare (tk,")")=0) r:=-1;
+  } else if (type (tk[int8])=Letter) {
+    tokenIndex:=tokenIndex+TokenLength;
+    string.copy (token+it,tk);
+    readToken ();
+    if (string.compare (tk,"(")=0) {
+      if (syntaxFunctionCall (-1,it)=0)
+        break syntaxPrimaryExpressionNoPointer;
+      tokenIndex:=it;
+      r:=-1;
+      break syntaxPrimaryExpressionNoPointer;
+    } else {
+      unread (-1,unreadToken);
+      sl:=find (variableIndex,variableName,token+it);
+      if (sl=-1) {
+        sl:=find (globalIndex,globalName,token+it);
+        if (sl=-1) {
+          r:=0;
+          break syntaxPrimaryExpressionNoPointer;
+        } else {
+          p:=globalType[sl,int8];
+          if (p&EXTERN=0) {
+            if (p=LABEL) c:=3;
+					  else c:=0;
+          } else {
+            p:=p&~EXTERN;
+            if (p=LABEL) c:=5;
+					  else c:=4;
+          }
+        }
+      } else {
+        p:=variableType[sl,int8];
+        c:=2;
+      }
+      if (c=0) {
+        string.copy (stringBuffer,"[");
+        string.concat (stringBuffer,unitName);
+        string.concat (stringBuffer,".");
+        string.concat (stringBuffer,token+it);
+        string.concat (stringBuffer,"]");
+        movR (p,stringBuffer);
+      } else if (c=1) {
+        string.copy (stringBuffer,"[");
+        string.concat (stringBuffer,token+it);
+        string.concat (stringBuffer,"]");
+				writeASM (MOVRA,stringBuffer,COMMENT);
+			} else if (c=3) {
+        string.copy (stringBuffer,unitName);
+        string.concat (stringBuffer,".");
+        string.concat (stringBuffer,token+it);
+				writeASM (MOVRA,stringBuffer,COMMENT);
+			} else if (c=4) {
+        string.copy (stringBuffer,"[");
+        string.concat (stringBuffer,token+it);
+        string.concat (stringBuffer,"]");
+        movR (p,stringBuffer);
+			} else if (c=5) {
+        string.copy (stringBuffer,token+it);
+				writeASM (MOVRA,stringBuffer,COMMENT);
+	    } else writeASM (MOVRASP,
+							string.hexadecimal (
+							shl (variableIndex-sl-1,3)),COMMENT);
+      writeASM (PUSHA,NOP,COMMENT);
+      variableName[variableIndex*TokenLength,int8]:=0;
+      variableType[variableIndex,int8]:=p;
+      variableIndex:=variableIndex+1;
+      tokenIndex:=it;
+      r:=-1;
+    }
+  } else r:=syntaxNumber (0);
+}
+
+function syntaxPointer (int8 r;) {
+	int8 t;
+
+  r:=0;
+  readToken ();
+  t:=varType (0,tk);
+  if (t=0) {
+    if (syntaxExpression (0)=0) break syntaxPointer;
+    readToken ();
+    if (string.compare (tk,",")<>0) break syntaxPointer;
+    readToken ();
+    t:=varType (0,tk);
+    if (t=0) break syntaxPointer;
+    writeASM (POPA,NOP,COMMENT);
+    writeASM (ADD0,NOP,COMMENT);
+    variableIndex:=variableIndex-1;
+	}
+	writeASM (POP1,NOP,COMMENT);
+  if (t=INT8) {
+    writeASM (MOV_8,NOP,COMMENT);
+    writeASM (MOVSXAL,NOP,COMMENT);
+    writeASM (PUSHA,NOP,COMMENT);
+  } else if (t=UINT8) {
+    writeASM (XORA,NOP,COMMENT);
+    writeASM (MOV_8,NOP,COMMENT);
+    writeASM (PUSHA,NOP,COMMENT);
+  } else if (t=INT16) {
+    writeASM (MOV_16,NOP,COMMENT);
+    writeASM (MOVSXAX,NOP,COMMENT);
+    writeASM (PUSHA,NOP,COMMENT);
+  } else if (t=UINT16) {
+    writeASM (XORA,NOP,COMMENT);
+    writeASM (MOV_16,NOP,COMMENT);
+    writeASM (PUSHA,NOP,COMMENT);
+  } else if (t=INT32) {
+    writeASM (MOV_32,NOP,COMMENT);
+    writeASM (MOVSXEA,NOP,COMMENT);
+    writeASM (PUSHA,NOP,COMMENT);
+  } else if (t=UINT32) {
+    writeASM (XORA,NOP,COMMENT);
+    writeASM (MOV_32,NOP,COMMENT);
+    writeASM (PUSHA,NOP,COMMENT);
+  } else if (t=FLOAT32) {
+    writeASM (XORA,NOP,COMMENT);
+    writeASM (MOV_32,NOP,COMMENT);
+    writeASM (PUSHA,NOP,COMMENT);
+  } else if (t=INT64 or t=FLOAT64 or t=POINTER)
+    writeASM (PUSHR,NOP,COMMENT);
+  variableType[variableIndex-1,int8]:=t;
+  variableName[(variableIndex-1)*TokenLength,int8]:=0;
+  readToken ();
+  if (string.compare (tk,"]")=0) r:=-1;
+}
+
+function syntaxPrimaryExpression (int8 r;) {
+  r:=0;
+  if (syntaxPrimaryExpressionNoPointer (0)=0) break syntaxPrimaryExpression;
+  readToken ();
+  if (string.compare (tk,"[")=0) {
+    r:=syntaxPointer (0);
+    break syntaxPrimaryExpression;
+  }
+  unread (-1,unreadToken);
+  r:=-1;
+}
+
+function syntaxPower (int8 r;) {
+  r:=0;
+  if (syntaxPrimaryExpression (0)=0) break syntaxPower;
+  do {
+    readToken ();
+    if (string.compare (tk,"^")<>0) break;
+    readToken ();
+    if (syntaxPrimaryExpression (0)=0) break syntaxPower;
+    variableIndex:=variableIndex-1;
+    if (variableType[variableIndex,int8]=FLOAT64)
+      writeASM (LOAD_FLOAT64,NOP,COMMENT);
+    else if (variableType[variableIndex,int8]=FLOAT32)
+      writeASM (LOAD_FLOAT32,NOP,COMMENT);
+    else writeASM (LOAD_INT64,NOP,COMMENT);
+    writeASM (STACKA,NOP,COMMENT);
+    if (variableType[variableIndex-1,int8]=FLOAT64)
+      writeASM (LOAD_FLOAT64,NOP,COMMENT);
+    else if (variableType[variableIndex-1,int8]=FLOAT32)
+      writeASM (LOAD_FLOAT32,NOP,COMMENT);
+    else writeASM (LOAD_INT64,NOP,COMMENT);
+    writeASM (POWER,NOP,COMMENT);
+    variableType[variableIndex,int8]:=FLOAT64;
+  }
+  unread (-1,unreadToken);
+  r:=-1;
+}
+
+function syntaxAddMul (int8 r;) {
+  int64 sl=variableIndex;
+  pointer c,d,e,f,g,co;
+  int16 it=tokenIndex,i;
+  int8 a,b;
+  
+  token[it,int8]:=0;
+  tokenIndex:=tokenIndex+TokenLength;
+  a:=r;r:=0;
+  if (a<>0) {
+    if (syntaxAddMul (0)=0) break syntaxAddMul;
+  } else {
+    if (syntaxPower (0)=0) break syntaxAddMul;
+  }
+  do {
+    readToken ();
+    b:=tk[int8];
+    if (a<>0 and [b='+' or b='-'] or
+      a=0 and [b='*' or b='/' or b='%']) {
+      readToken ();
+      if (string.compare (tk,"[")=0) {
+        readToken ();
+        string.copy (token+it,tk);
+        readToken ();
+        if (string.compare (tk,"]")<>0) break syntaxAddMul;
+        readToken ();
+      }
+      if (a<>0) {
+        if (syntaxAddMul (0)=0) break syntaxAddMul;
+      } else {
+        if (syntaxPower (0)=0) break syntaxAddMul;
+      }
+      if (token[it,int8]<>0) {
+        i:=-1;
+        if (b='+') {c:="add";d:=".add";}
+        else if (b='*') {c:="mul";d:=".mul";}
+        else break syntaxAddMul;
+        if (string.compare (token+it,unitName)=0)
+          i:=find (globalIndex,globalName,c);
+        string.concat (token+it,d);
+        if (i=-1) i:=find (globalIndex,globalName,token+it);
+        writeASM (CALL0,token+it,COMMENT);
+        if (i=-1) break syntaxAddMul;
+        if (globalName[i*TokenLength+Param1,uint8]+
+          globalName[i*TokenLength+Param2,uint8]<>variableIndex-sl)
+          error ("warning: function parameters<>definition");
+        if (variableIndex<>sl+globalName[i*TokenLength+Param1,uint8]) {
+          writeASM (STACK,string.hexadecimal (shl (
+            variableIndex-sl-globalName[i*TokenLength+Param1,uint8],3)),
+            COMMENT
+          );
+          variableIndex:=sl+globalName[i*TokenLength+Param1,uint8];
+        }
+        r:=-1;
+        break syntaxAddMul;
+      }
+      d:=STACKA;f:=XORA;e:=NOP;g:=NOP;
+      variableIndex:=variableIndex-1;
+      if (variableType[variableIndex,int8]=FLOAT64) c:=LOAD_FLOAT64;
+      else if (variableType[variableIndex,int8]=FLOAT32)
+        c:=LOAD_FLOAT32;
+      else if (variableType[variableIndex-1,int8]<>FLOAT64 and
+       variableType[variableIndex-1,int8]<>FLOAT32) {
+        if (b='+') {c:=POPA;d:=NOP;e:=NOP;f:=ADD0;g:=NOP;}
+        else if (b='-') {c:=POPA;d:=NOP;e:=NOP;f:=SUB0;g:=NOP;}
+        else if (b='*') {c:=XOR0;d:=POPA;e:=NOP;f:=IMUL0;g:=MOV0;}
+        else if (b='/') {c:=XOR0;d:=MOVA8;e:=IDIV0;f:=STACKA;g:=MOV0;}
+        else if (b='%') {c:=XOR0;d:=MOVA8;e:=IDIV0;f:=STACKA;g:=MOV1;}
+        variableType[variableIndex-1,int8]:=INT64;
+      } else c:=LOAD_INT64;
+      if (variableType[variableIndex-1,int8]=FLOAT64) {
+        g:=STORE_FLOAT64;
+      } else if (variableType[variableIndex-1,int8]=FLOAT32) {
+        if (b='+') f:=F32ADD;
+        else if (b='-') f:=F32SUB;
+        else if (b='*') f:=F32MUL;
+        else if (b='/') f:=F32DIV;
+        if (c=LOAD_FLOAT64) {
+          g:=STORE_FLOAT64;
+          variableType[variableIndex-1,int8]:=FLOAT64;
+        } else g:=STORE_FLOAT32;
+      } else if (f=XORA) {
+        if (b='+') f:=FIADD;
+        else if (b='-') f:=FISUB;
+        else if (b='*') f:=FIMUL;
+        else if (b='/') f:=FIDIV;
+        if (c=LOAD_FLOAT64) {
+          g:=STORE_FLOAT64;
+          variableType[variableIndex-1,int8]:=FLOAT64;
+        } else {
+          g:=STORE_FLOAT32;
+          variableType[variableIndex-1,int8]:=FLOAT32;
+        }
+      }
+      if (f=XORA) {
+        if (b='+') f:=F64ADD;
+        else if (b='-') f:=F64SUB;
+        else if (b='*') f:=F64MUL;
+        else if (b='/') f:=F64DIV;
+      }
+    } else if (b='|') {
+      readToken ();
+      if (syntaxAddMul (0)=0) break syntaxAddMul;
+      c:=NOP;d:=POPA;e:=NOP;f:=OR0;g:=NOP;
+      variableIndex:=variableIndex-1;
+    } else if (b='&') {
+      readToken ();
+      if (syntaxPower (0)=0) break syntaxAddMul;
+      c:=NOP;d:=POPA;e:=NOP;f:=AND0;g:=NOP;
+      variableIndex:=variableIndex-1;
+    } else break;
+    if (c=NOP) co:=NOP; else co:=COMMENT;
+    writeASM (c,NOP,co);
+    if (d=NOP) co:=NOP; else co:=COMMENT;
+    writeASM (d,NOP,co);
+    if (e=NOP) co:=NOP; else co:=COMMENT;
+    writeASM (e,NOP,co);
+    if (f=NOP) co:=NOP; else co:=COMMENT;
+    writeASM (f,NOP,co);
+    if (g=NOP) co:=NOP; else co:=COMMENT;
+    writeASM (g,NOP,co);
+    continue;
+  }
+  unread (-1,unreadToken);
+  r:=-1;
+}
+
+function syntaxExpression (int8 r;) {
+  r:=syntaxString (0);
+  if (r=0) r:=syntaxAddMul (-1);
+}
+
+function syntaxPointerAssign (int8 r;) {
+  int8 p;
+  
+  r:=0;
+  readToken ();
+  p:=varType (0,tk);
+  if (p=0) {
+    if (syntaxExpression (0)=0) break syntaxPointerAssign;
+    writeASM (POPA,NOP,COMMENT);
+    variableIndex:=variableIndex-1;
+    writeASM (ADD0,NOP,COMMENT);
+    readToken ();
+    if (string.compare (tk,",")<>0) break syntaxPointerAssign;
+    readToken ();
+    p:=varType (0,tk);
+    if (p=0) break syntaxPointerAssign;
+	}
+  readToken ();
+  if (string.compare (tk,"]")<>0) break syntaxPointerAssign;
+  readToken ();
+  if (string.compare (tk,":")<>0) break syntaxPointerAssign;
+  readToken ();
+  if (string.compare (tk,"=")<>0) break syntaxPointerAssign;
+  readToken ();
+  if (syntaxExpression (0)=0) break syntaxPointerAssign;
+  readToken ();
+  if (string.compare (tk,";")<>0) break syntaxPointerAssign;  
+  writeASM (POPA,NOP,COMMENT);
+  writeASM (POP1,NOP,COMMENT);
+  variableIndex:=variableIndex-2;
+  if (p=INT8 or p=UINT8) writeASM (MOV8,NOP,COMMENT);
+  else if (p=INT16 or p=UINT16) writeASM (MOV16,NOP,COMMENT);
+  else if (p=INT32 or p=UINT32 or p=FLOAT32)
+    writeASM (MOV32,NOP,COMMENT);
+  else if (p=INT64 or p=FLOAT64 or p=POINTER)
+    writeASM (MOV64,NOP,COMMENT);
+	r:=-1;
+}
+
+function syntaxAssign (int8 r;int16 it) {
+  int64 sl;
+  int8 p,n;
+
+  n:=r;r:=0;
+  readToken ();
+  if (string.compare (tk,"=")<>0) break syntaxAssign;
+  readToken ();
+  if (syntaxExpression (0)=0) break syntaxAssign;
+  readToken ();
+  if (string.compare (tk,";")<>0) break syntaxAssign;
+  do {
+    sl:=find (variableIndex,variableName,token+(it+n-1)*TokenLength);
+    variableIndex:=variableIndex-1;
+    if (sl=-1) {
+      writeASM (POPA,NOP,COMMENT);
+      sl:=find (globalIndex,globalName,token+(it+n-1)*TokenLength);
+      if (sl=-1) break syntaxAssign;
+      p:=globalType[sl,int8];
+      stringBuffer[uint8]:=0;
+      if (p&EXTERN=0) {
+        string.copy (stringBuffer,unitName);
+        string.concat (stringBuffer,".");
+      } else p:=p&~EXTERN;
+      string.concat (stringBuffer,token+(it+n-1)*TokenLength);
+      r:=-1;
+      if (p=INT64 or p=FLOAT64 or p=POINTER)
+        writeASM (MOVI64,stringBuffer,COMMENT);
+      else if (p=FLOAT32 or p=INT32 or p=UINT32)
+        writeASM (MOVI32,stringBuffer,COMMENT);
+      else if (p=INT16 or p=UINT16)
+        writeASM (MOVI16,stringBuffer,COMMENT);
+      else if (p=INT8 or p=UINT8)
+        writeASM (MOVI8,stringBuffer,COMMENT);
+      else r:=0;
+      break syntaxAssign;
+    } else {
+      p:=variableType[sl,int8];
+      if (p<=INT64) {
+        if (variableType[variableIndex,int8]=FLOAT64) {
+	        writeASM (LOAD_FLOAT64,NOP,COMMENT);
+	        writeASM (STORE_INT64,NOP,COMMENT);
+        } else if (variableType[variableIndex,int8]=FLOAT32) {
+      	  writeASM (LOAD_FLOAT32,NOP,COMMENT);
+	        writeASM (STORE_FLOAT64,NOP,COMMENT);
+        }
+      } else if (p=FLOAT32 and variableType[variableIndex,int8]=FLOAT64) {
+	      writeASM (LOAD_FLOAT64,NOP,COMMENT);
+	      writeASM (STORE_FLOAT32,NOP,COMMENT);
+      } else if (p=FLOAT64 and variableType[variableIndex,int8]=FLOAT32) {
+       	writeASM (LOAD_FLOAT32,NOP,COMMENT);
+	      writeASM (STORE_FLOAT64,NOP,COMMENT);
+      } else if (variableType[variableIndex,int8]<=INT64) {
+        if (p=FLOAT64) {
+      	  writeASM (LOAD_INT64,NOP,COMMENT);
+	        writeASM (STORE_FLOAT64,NOP,COMMENT);
+        } else if (p=FLOAT32) {
+      	  writeASM (LOAD_INT64,NOP,COMMENT);
+	        writeASM (STORE_FLOAT32,NOP,COMMENT);
+        }
+      }
+      writeASM (POPA,NOP,COMMENT);
+    }
+    writeASM (MOVE64,string.hexadecimal (
+      shl (variableIndex-sl-1,3)),COMMENT);
+    n:=n-1;
+    if (n>0) continue;
+  }
+  r:=-1;
+}
+
+function syntaxDeclaration (int8 r;pointer t) {
+  int16 it;
+  int8 g,p;
+  
+  g:=r;r:=0;
+  p:=varType (0,t);
+  if (p=0) break syntaxDeclaration;
+  do sdeclaration {
+    readToken ();
+    if (type (tk[int8])<>Letter) break syntaxDeclaration;
+    if (g<>0) {
+			string.copy (stringBuffer,unitName);
+      string.concat (stringBuffer,".");
+      string.concat (stringBuffer,tk);
+      writeASM (GLOBAL,stringBuffer,COMMENT);
+			writeASM (stringBuffer,NOP,NOP);
+      string.copy (globalName+globalIndex*TokenLength,tk);
+      globalName[globalIndex*TokenLength+Param1,uint8]:=0;
+      globalName[globalIndex*TokenLength+Param2,uint8]:=0;
+      globalType[globalIndex,int8]:=p;	//globalIndex++ mas adelante
+      readToken ();
+      if (string.compare (tk,"=")=0) {
+				readToken ();
+        if (tk[int8]='\"') {
+          globalType[globalIndex,int8]:=LABEL;
+					writeASM (DB0,parseString (tk),NOP);
+        } else {
+					varASM (p);
+          if (syntaxNumber (-1)=0) break syntaxDeclaration;
+				}
+        readToken ();
+      } else if (string.compare (tk,"[")=0) {
+				varASM (p);
+        globalType[globalIndex,int8]:=LABEL;
+        do sdarray {
+					readToken ();
+					if (syntaxNumber (-1)=0) break syntaxDeclaration;
+	        readToken ();
+	        if (string.compare (tk,",")=0)
+	          writeASM (",",NOP,NOP);
+	        else if (string.compare (tk,"]")=0) {
+	          readToken ();
+	          break sdarray;
+	        } else break syntaxDeclaration;
+          continue;
+				}
+			} else {
+    	  varASM (p);
+				writeASM ("0",NOP,NOP);
+			}
+      writeASM (COMMENT,NOP,NOP);
+			globalIndex:=globalIndex+1;
+    } else {
+      it:=tokenIndex;
+      tokenIndex:=tokenIndex+TokenLength;
+      string.copy (token+it,tk);
+      readToken ();
+      if (string.compare (tk,"=")=0) {
+        readToken ();
+        if (syntaxExpression (0)=0) break syntaxDeclaration;
+        variableIndex:=variableIndex-1;
+        readToken ();
+      } else {
+        writeASM (XORA,NOP,COMMENT);
+        writeASM (PUSHA,NOP,COMMENT);
+      }
+      string.copy (variableName+variableIndex*TokenLength,token+it);
+      variableType[variableIndex,int8]:=p;
+      variableIndex:=variableIndex+1;
+      tokenIndex:=it;
+    }
+    if (string.compare (tk,";")=0) {
+      writeASM (COMMENT,NOP,NOP);
+			r:=-1;
+		} else if (string.compare (tk,",")=0) continue;
+    else break syntaxDeclaration;
+  }
+}
+
+function syntaxBlock (int8 r;pointer n) {
+  int16 a,b,v,it=tokenIndex;
+  int8 s=r;
+
+  r:=0;
+  tokenIndex:=tokenIndex+TokenLength;
+  if (string.compare (tk,"do")=0) {
+    readToken ();
+    if (string.compare (tk,"{")<>0) {
+      if (type (tk[int8])<>Letter) break syntaxBlock;
+      writeASM (";do #\n",tk,COMMENT);
+      string.copy (token+it,tk);
+      if (n[int8]<>0 and string.compare (token+it,n)<>0) break syntaxBlock;
+      readToken ();
+      if (string.compare (tk,"{")<>0) break syntaxBlock;
+    } else string.copy (token+it,n);
+  } else string.copy (token+it,n);
+  string.copy (blockName+blockIndex*TokenLength,token+it);
+  blockLabel[shl (blockIndex,3),int64]:=labelIndex;
+  blockIndex:=blockIndex+1;
+  v:=variableIndex;
+  a:=actualLabel;
+  actualLabel:=labelIndex;
+  b:=labelIndex;
+  labelIndex:=labelIndex+2;
+  writeASM (ETQ,string.hexadecimal (b)," ;begin\n");
+  do {
+    readToken ();
+    if (syntaxDeclaration (0,tk)<>0) continue;
+  }
+  do {
+    if (string.compare (tk,"}")=0) break;
+    if (syntaxStatement (0)=0) break syntaxBlock;
+    readToken ();
+    continue;
+  }
+  writeASM (ETQ,string.hexadecimal (b+1)," ;end\n");
+  if (variableIndex<>v) {
+    writeASM (STACK,
+      string.hexadecimal (shl (variableIndex-v,3)),COMMENT);
+    variableIndex:=v;
+  }
+  if (s<>0) writeASM (RET0,NOP,COMMENT);
+  actualLabel:=a;
+  tokenIndex:=it;
+  blockIndex:=blockIndex-1;
+  r:=-1;
+}
+
+function syntaxStatement (int8 r;) {
+  int16 it=tokenIndex;
+  int64 sl;
+
+  r:=0;
+  if (syntaxBreakContinue (0,"break")<>0) {
+    r:=-1;
+    break syntaxStatement;
+  }
+  if (syntaxBreakContinue (0,"continue")<>0) {
+    r:=-1;
+    break syntaxStatement;
+  }
+  if (string.compare (tk,"do")=0 or string.compare (tk,"{")=0) {
+    r:=syntaxBlock (0,"");
+    break syntaxStatement;
+  }
+  if (string.compare (tk,"if")=0) {
+    r:=syntaxIf (0);
+    break syntaxStatement;
+  }
+  if (type (tk[int8])=Letter) {
+    tokenIndex:=tokenIndex+TokenLength;
+    string.copy (token+it,tk);
+    readToken ();
+    if (string.compare (tk,",")=0) {
+      do {
+        readToken ();
+        if (type (tk[int8])<>Letter) break syntaxStatement;
+        string.copy (token+tokenIndex,tk);
+        tokenIndex:=tokenIndex+TokenLength;
+        readToken ();
+        if (string.compare (tk,",")=0) continue;
+        if (string.compare (tk,":")=0) {
+					if (syntaxAssign ((tokenIndex-it)/TokenLength,it/TokenLength)<>0) {
+						tokenIndex:=it;
+						r:=-1;
+					}
+				}
+				break syntaxStatement;
+      }
+    } else if (string.compare (tk,":")=0) {
+      r:=syntaxAssign (1,it/TokenLength);
+      tokenIndex:=it;
+    } else if (string.compare (tk,"(")=0) {
+      r:=0;
+      if (syntaxFunctionCall (0,it)=0) break syntaxStatement;
+      readToken ();
+      if (string.compare (tk,";")=0) {
+				tokenIndex:=it;
+				r:=-1;
+			}
+    } else if (string.compare (tk,"[")=0) {
+      sl:=find (variableIndex,variableName,token+it);
+      if (sl=-1) {
+				sl:=find (globalIndex,globalName,token+it);
+				if (sl=-1) break syntaxStatement;
+			  else {
+          stringBuffer[int8]:=0;
+          if (globalType[sl,int8]&EXTERN=0) {
+	          string.copy (stringBuffer,unitName);
+	          string.concat (stringBuffer,".");
+	        }
+          string.concat (stringBuffer,token+it);
+          if (globalType[sl,int8]&~EXTERN=LABEL) {
+	          writeASM (MOVRA,stringBuffer,COMMENT);
+	          writeASM (PUSHA,NOP,COMMENT);
+	        } else writeASM (PUSHM,stringBuffer,COMMENT);
+        }
+		  } else {
+	      writeASM (PUSHSP,
+	        string.hexadecimal (
+	          shl (variableIndex-sl-1,3)),COMMENT);
+        variableType[variableIndex,int8]:=variableType[sl,int8];
+		  }
+      variableName[variableIndex*TokenLength,int8]:=0;
+      variableIndex:=variableIndex+1;
+      tokenIndex:=it;
+      r:=syntaxPointerAssign (0);
+    }
+  }
+}
+
+function syntaxFunction (int8 r;) {
+  int16 vi;
+
+  r:=0;
+  vi:=variableIndex;
+  readToken ();
+  if (type (tk[int8])<>Letter) break syntaxFunction;
+  string.copy (stringBuffer,unitName);
+  string.concat (stringBuffer,".");
+  string.concat (stringBuffer,tk);
+  writeASM (GLOBAL,stringBuffer,COMMENT);
+  writeASM (LABEL_ASM,stringBuffer,COMMENT);
+  string.copy (globalName+globalIndex*TokenLength,tk);
+  globalType[globalIndex,int8]:=LABEL;
+  readToken ();
+  if (string.compare (tk,"(")=0) {
+    if (syntaxParameter (0)=0) break syntaxFunction;
+    if (string.compare (tk,")")<>0) break syntaxFunction;
+    readToken ();
+	}
+  globalIndex:=globalIndex+1;
+  variableName[variableIndex*TokenLength,int8]:=0;
+  variableType[variableIndex,int8]:=POINTER;
+  variableIndex:=variableIndex+1;
+  if (syntaxBlock (-1,globalName+(globalIndex-1)*TokenLength)=0)
+    break syntaxFunction;
+  variableIndex:=vi;
+  r:=-1;
+}
+
+function syntaxFunctions (int8 r;pointer name) {
+  int8 s,t=r;
+
+  do {
+    readToken ();
+    s:=varType (0,tk);
+    if (s<>0) readToken ();
+    else s:=LABEL;
+    if (t=EXTERN) {
+      globalName[globalIndex*TokenLength,uint8]:=0;
+      if (name[uint8]<>0) {
+        string.copy (globalName+globalIndex*TokenLength,name);
+        string.concat (globalName+globalIndex*TokenLength,".");
+      }
+      string.concat (globalName+globalIndex*TokenLength,tk);
+      writeASM (EXTERN_ASM,globalName+globalIndex*TokenLength,COMMENT);
+    } else string.copy (globalName+globalIndex*TokenLength,tk);
+    globalType[globalIndex,int8]:=s|t;
+    readToken ();
+    if (tk[int8]=':') {
+      readToken ();
+      r:=string.decimalToInt (tk);
+      globalName[globalIndex*TokenLength+Param1,int8]:=r;
+      r:=0;
+      readToken ();
+      if (tk[int8]<>':') break syntaxFunctions;
+      readToken ();
+      r:=string.decimalToInt (tk);
+      globalName[globalIndex*TokenLength+Param2,int8]:=r;
+      readToken ();
+    }
+    globalIndex:=globalIndex+1;
+    r:=0;
+    if (tk[int8]=',') continue;
+  }
+  r:=-1;
+}
+
+function syntaxImport (int8 r;pointer name) {
+  r:=0;
+  name[int8]:=0;
+  readToken ();
+  if (type (tk[uint8])<>Letter) name[uint8]:=0;
+  else {
+    string.concat (name,tk);
+    readToken ();
+  }
+  if (tk[1,int8]<>0) break syntaxImport;
+  if (tk[int8]='(') {
+    if (syntaxFunctions (EXTERN,name)=0) break syntaxImport;
+    if (tk[int8]<>')') break syntaxImport;
+    readToken ();
+  }
+  if (tk[int8]=';') {
+    r:=-1;
+    break syntaxImport;
+  }
+}
+
+function syntaxUnitIdentifier (int8 r;pointer name) {
+  r:=0;
+  name[int8]:=0;
+  do {
+    readToken ();
+    if (type (tk[int8])<>Letter) break syntaxUnitIdentifier;
+    string.concat (name,tk);
+    readToken ();
+    if ((tk+1)[int8]<>0) break syntaxUnitIdentifier;
+    if (tk[int8]=';') {
+      r:=-1;
+      break syntaxUnitIdentifier;
+    } else if (tk[int8]<>'.') break syntaxUnitIdentifier;
+    string.concat (name,tk);
+    continue;
+  }
+}
+
+function syntaxUnit (int8 r;) {
+  r:=0;
+  readToken ();
+  if (string.compare (tk,"unit")<>0) break syntaxUnit;
+  if (syntaxUnitIdentifier (0,unitName)=0) break syntaxUnit;
+  writeASM (UNIT,unitName,COMMENT);
+  writeASM (TEXT,NOP,COMMENT);
+  writeASM (GLOBAL0,unitName,COMMENT);
+  numberOfExternalUnits:=0;
+  do {
+    readToken ();
+    if (string.compare (tk,"import")<>0) break;
+    if (syntaxImport (0,externalUnit+numberOfExternalUnits*TokenLength)=0)
+      break syntaxUnit;
+    continue;
+  }
+  writeASM (NOP,NOP,COMMENT);
+  if (string.compare (tk,"functions")=0) {
+    if (syntaxFunctions (0,"")=0) break syntaxUnit;
+    if (string.compare (tk,";")<>0) break syntaxUnit;
+    readToken ();
+  }
+  do {
+    if (string.compare (tk,"define")<>0) break;
+    readToken ();
+    if (syntaxDeclaration (-1,tk,)=0) break syntaxUnit;
+    readToken ();
+    continue;
+  }
+  writeASM (DATA,NOP,COMMENT);
+  do {
+    if (syntaxDeclaration (-1,tk,)=0) break;
+    readToken ();
+    continue;
+  }
+  writeASM (TEXT,NOP,COMMENT);
+  do {
+    if (string.compare (tk,"function")<>0) break;
+    if (syntaxFunction (0)=0) break syntaxUnit;
+    readToken ();
+    continue;
+  }
+  writeASM (LMAIN,unitName,COMMENT);
+  writeASM (CALLS,unitName,COMMENT);
+  writeASM (EXIT,NOP,COMMENT);
+  writeASM (COMMENT,NOP,COMMENT);
+  if (useCCALL<>0) {
+    writeASM (CCALL0,NOP,COMMENT);
+    writeASM (CCALL1,NOP,COMMENT);
+    writeASM (CCALL2,NOP,COMMENT);
+    writeASM (COMMENT,NOP,COMMENT);
+  }
+
+  readToken ();
+  if (tk[0,uint8]<>0) break syntaxUnit;
+  r:=-1;
+}
+
+function main (int8 code;
+  int64 parameters,pointer parameter,pointer enviroment) {
+  pointer p1,p2;
+  int64 l;
+  
+  code:=0;
+  if (parameters<3) {
+    string.write (system.out,"usage: \'lmsc sourcefile nasmfile\'\n");
+    code:=1;
+    break main;
+  }
+
+  l:=TokenLength*ObjectsNumber;
+
+  p1:=system.memory (7*l+3*ObjectsNumber+3*TokenLength+3*LineLength+2);
+  externalUnit:=p1;
+  p1:=p1+l;
+  blockName:=p1;
+  p1:=p1+l;
+  blockLabel:=p1;
+  p1:=p1+ObjectsNumber;
+  variableName:=p1;
+  p1:=p1+l;
+  globalName:=p1;
+  p1:=p1+l;
+  token:=p1;
+  p1:=p1+l;
+  variableType:=p1;
+  p1:=p1+ObjectsNumber;
+  globalType:=p1;
+  p1:=p1+ObjectsNumber;
+  unitName:=p1;
+  p1:=p1+TokenLength;
+  tk:=p1;
+  p1:=p1+TokenLength;
+  stringBuffer:=p1;
+  p1:=p1+TokenLength;
+  nasm:=p1;  
+  p1:=p1+TokenLength;
+  param:=p1;  
+  p1:=p1+LineLength;
+  line:=p1;
+  p1:=p1+LineLength;
+  bufferCharacter:=p1;
+  unreadCharacter:=bufferCharacter+1;
+  unreadCharacter[int8]:=0;
+  unreadToken:=bufferCharacter+2;
+  unreadToken[int8]:=0;
+
+  p1:=parameter+string.length (parameter)+1;
+  p2:=p1+string.length (p1)+1;
+  fileSource:=system.open (p1,system.O_RDONLY,0);
+
+  fileNASM:=system.open (p2,
+    system.O_WRONLY|system.O_CREAT|system.O_TRUNC,511);
+
+  useCCALL:=0;
+  numberOfExternalUnits:=0;
+  tokenIndex:=0;
+  blockIndex:=0;
+  variableIndex:=0;
+  globalIndex:=0;
+  labelIndex:=0;
+  lineNumber:=1;
+  unreadCharacter[int8]:=0;
+  unreadToken[int8]:=0;
+  comment:=NOP;
+    
+  if (syntaxUnit (0)=0) {
+    error ("Syntax error");
+    code:=2;
+  }
+
+  system.close (fileNASM);
+  system.close (fileSource);
+}

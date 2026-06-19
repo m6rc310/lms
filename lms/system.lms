@@ -1,0 +1,329 @@
+/*
+    Este codigo es parte de "lmsc"
+    Copyright (C) 2026  Marcelo Reina Aguilar
+
+    Este programa es software libre: usted puede redistribuirlo y/o modificarlo
+    bajo los términos de la Licencia Pública General de GNU publicada por
+    la Fundación para el Software Libre, ya sea la versión 3 de la Licencia,
+    o (a su elección) cualquier versión posterior.
+
+    Este programa se distribuye con la esperanza de que sea útil, pero
+    SIN NINGUNA GARANTÍA; ni siquiera la garantía implícita de
+    COMERCIABILIDAD o IDONEIDAD PARA UN FIN DETERMINADO. Consulte la
+    Licencia Pública General de GNU para más detalles.
+
+    Debería haber recibido una copia de la Licencia Pública General de GNU
+    junto con este programa. En caso contrario, consulte <https://www.gnu.org/licenses/>.
+*/
+
+unit system;
+
+import sysasm (syscall:1:6);
+
+define int64
+                      // unistd.h
+                        // read, write...
+  STDIN_FILENO=0,       // entrada estandar
+  STDOUT_FILENO=1,      // salida estandar
+  STDERR_FILENO=2,      // errores estandar
+                        // lseek
+  SEEK_SET=0,           // desde el comienzo del fichero
+  SEEK_CUR=1,           // desde la posicion actual
+  SEEK_END=2,           // desde el final del fichero
+                        // lockf
+  F_ULOCK=0,            // unlock
+  F_LOCK=1,             // lock
+  F_TLOCK=2,            // test and lock
+  F_TEST=3,             // test for other processes locks.  */
+
+                      // fcntl.h
+  O_ACCMODE=3,
+  O_RDONLY=0,
+  O_WRONLY=1,
+  O_RDWR=2,
+
+  O_CREAT=0x40,
+  O_EXCL=0x80,
+  O_NOCTTY=0x100,
+  O_TRUNC=0x200,
+  O_APPEND=0x400,
+  O_NONBLOCK=0x800,
+  O_DSYNC=0x1000,
+  FASYNC=0x2000,
+  O_DIRECT=0x4000,
+  O_LARGEFILE=0x8000,
+  O_DIRECTORY=0x10000,
+  O_NOFOLLOW=0x20000,
+  O_NOATIME=0x40000,
+  O_CLOEXEC=0x80000,
+
+  F_DUPFD=0,            /* dup */
+  F_GETFD=1,            /* get close_on_exec */
+  F_SETFD=2,            /* set/clear close_on_exec */
+  F_GETFL=3,            /* get file->f_flags */
+  F_SETFL=4,            /* set file->f_flags */
+  F_GETLK=5,
+  F_SETLK=6,
+  F_SETLKW=7,
+  F_SETOWN=8,           /* for sockets. */
+  F_GETOWN=9,           /* for sockets. */
+  F_SETSIG=10,          /* for sockets. */
+  F_GETSIG=11,          /* for sockets. */
+  F_GETLK64=12,      /*  using 'struct flock64' */
+  F_SETLK64=13,
+  F_SETLKW64=14,
+  F_SETOWN_EX=15,
+  F_GETOWN_EX=16,
+  F_GETOWNER_UIDS=17,
+  F_OFD_GETLK=36,
+  F_OFD_SETLK=37,
+  F_OFD_SETLKW=38,
+  F_OWNER_TID=0,
+  F_OWNER_PID=1,
+  F_OWNER_PGRP=2,
+  F_RDLCK=0,
+  F_WRLCK=1,
+  F_UNLCK=2,
+                      // ioctl.h
+  TCGETS=0x5401,
+  TCSETS=0x5402,
+  TCSETSW=0x5403,
+  TCSETSF=0x5404,
+  TCGETA=          0x5405,
+  TCSETA=          0x5406,
+  TCSETAW=         0x5407,
+  TCSETAF=         0x5408,
+  TCSBRK=          0x5409,
+  TCXONC=          0x540A,
+  TCFLSH=          0x540B,
+  TIOCEXCL=        0x540C,
+  TIOCNXCL=        0x540D,
+  TIOCSCTTY=       0x540E,
+  TIOCGPGRP=       0x540F,
+  TIOCSPGRP=       0x5410,
+  TIOCOUTQ=        0x5411,
+  TIOCSTI=         0x5412,
+  TIOCGWINSZ=      0x5413,
+  TIOCSWINSZ=      0x5414,
+  TIOCMGET=        0x5415,
+  TIOCMBIS=        0x5416,
+  TIOCMBIC=        0x5417,
+  TIOCMSET=        0x5418,
+  TIOCGSOFTCAR=    0x5419,
+  TIOCSSOFTCAR=    0x541A,
+  FIONREAD=        0x541B,
+  TIOCINQ=0x541B,
+  TIOCLINUX=0x541C,
+  TIOCCONS=        0x541D,
+  TIOCGSERIAL=     0x541E,
+  TIOCSSERIAL=     0x541F,
+  TIOCPKT=         0x5420,
+  FIONBIO=         0x5421,
+  TIOCNOTTY=       0x5422,
+  TIOCSETD=        0x5423,
+  TIOCGETD=        0x5424,
+  TCSBRKP=         0x5425,  /* Needed for POSIX tcsendbreak() */
+  TIOCSBRK=        0x5427,  /* BSD compatibility */
+  TIOCCBRK=        0x5428,  /* BSD compatibility */
+  TIOCGSID=        0x5429,  /* Return the session ID of FD */
+  TIOCGRS485=      0x542E,
+  TIOCSRS485=      0x542F,
+  TCGETX=          0x5432, /* SYS5 TCGETX compatibility */
+  TCSETX=          0x5433,
+  TCSETXF=         0x5434,
+  TCSETXW=         0x5435,
+  TIOCVHANGUP=     0x5437,
+  FIONCLEX=        0x5450,
+  FIOCLEX=         0x5451,
+  FIOASYNC=        0x5452,
+  TIOCSERCONFIG=   0x5453,
+  TIOCSERGWILD=    0x5454,
+  TIOCSERSWILD=    0x5455,
+  TIOCGLCKTRMIOS=  0x5456,
+  TIOCSLCKTRMIOS=  0x5457,
+  TIOCSERGSTRUCT=  0x5458, /* For debugging only */
+  TIOCSERGETLSR=   0x5459, /* Get line status register */
+  TIOCSERGETMULTI= 0x545A, /* Get multiport config  */
+  TIOCSERSETMULTI= 0x545B, /* Set multiport config */
+
+  TIOCMIWAIT=      0x545C,  /* wait for a change on serial input line(s) */
+  TIOCGICOUNT=     0x545D,  /* read serial port __inline__ interrupt counts */
+  FIOQSIZE=       0x5460,
+
+                          /* Used for packet mode */
+  TIOCPKT_DATA=             0,
+  TIOCPKT_FLUSHREAD=        1,
+  TIOCPKT_FLUSHWRITE=       2,
+  TIOCPKT_STOP=             4,
+  TIOCPKT_START=            8,
+  TIOCPKT_NOSTOP=          16,
+  TIOCPKT_DOSTOP=          32,
+  TIOCPKT_IOCTL=           64,
+
+  TIOCSER_TEMT=    0x01,    /* Transmitter physically empty */
+
+                            // wait.h
+  WNOHANG=0x00000001,
+  WUNTRACED=0x00000002,
+  WSTOPPED=0x00000002,
+  WEXITED=0x00000004,
+  WCONTINUED=0x00000008,
+  WNOWAIT=0x01000000,      /* Don't reap, just poll status.  */
+
+  __WNOTHREAD=0x20000000,      /* Don't wait on children of other threads in this group */
+  __WALL=0x40000000,      /* Wait on all children, regardless of type */
+  __WCLONE=0x80000000,      /* Wait only on non-SIGCHLD children */
+
+                          /* First argument to waitid: */
+  P_ALL=0,
+  P_PID=1,
+  P_PGID=2,
+  P_PIDFD=3,
+  
+                        // termios.h
+  ISIG=1,   /* Enable signals.  */
+  ICANON=2,   /* Canonical input (erase and kill processing).  */
+  XCASE=4,
+  ECHO=8,   /* Enable echo.  */
+  ECHOE=0x10,   /* Echo erase character as error-correcting
+                             backspace.  */
+  ECHOK=0x20,   /* Echo KILL.  */
+  ECHONL=0x40,   /* Echo NL.  */
+  NOFLSH=0x80,   /* Disable flush after interrupt or quit.  */
+  TOSTOP=0x100,   /* Send SIGTTOU for background output.  */
+  ECHOCTL=0x200,  /* If ECHO is also set, terminal special characters
+                             other than TAB, NL, START, and STOP are echoed as
+                             ^X, where X is the character with ASCII code 0x40
+                             greater than the special character
+                             (not in POSIX).  */
+  ECHOPRT=0x400,  /* If ICANON and ECHO are also set, characters are
+                             printed as they are being erased
+                             (not in POSIX).  */
+  ECHOKE=0x800,  /* If ICANON is also set, KILL is echoed by erasing
+                             each character on the line, as specified by ECHOE
+                             and ECHOPRT (not in POSIX).  */
+  FLUSHO=0x1000,  /* Output is being flushed.  This flag is toggled by
+                             typing the DISCARD character (not in POSIX).  */
+  PENDIN=0x4000,  /* All characters in the input queue are reprinted
+                             when the next character is read
+                             (not in POSIX).  */
+  IEXTEN=0x8000,   /* Enable implementation-defined input
+                             processing.  */
+  EXTPROC=0x10000,
+                      // stats.h
+  S_IRWXU=0x1c0,
+  S_IRUSR=0x100,
+  S_IWUSR=0x80,
+  S_IXUSR=0x40,
+  S_IRWXG=0x38,
+  S_IRGRP=0x20,
+  S_IWGRP=0x10,
+  S_IXGRP=0x8,
+  S_IRWXO=0x7,
+  S_IROTH=0x4,
+  S_IWOTH=0x2,
+  S_IXOTH=0x1,
+                      // mmap.h
+  PROT_READ=0x1,             /* Page can be read.  */
+  PROT_WRITE=0x2,             /* Page can be written.  */
+  PROT_EXEC=0x4,             /* Page can be executed.  */
+  PROT_NONE=0x0,             /* Page can not be accessed.  */
+  PROT_GROWSDOWN=0x01000000,      /* Extend change to start of
+                                           growsdown vma (mprotect only).  */
+  PROT_GROWSUP=0x02000000,      /* Extend change to start of
+                                           growsup vma (mprotect only).  */
+  MAP_SHARED=0x01,            /* Share changes.  */
+  MAP_PRIVATE=0x02,            /* Changes are private.  */
+  MAP_SHARED_VALIDATE=0x03,    /* Share changes and validate
+                                          extension flags.  */
+  MAP_DROPPABLE=0x08,            /* Zero memory under memory pressure.  */
+  MAP_TYPE=0x0f,            /* Mask for type of mapping.  */
+
+                              /* Other flags.  */
+  MAP_FIXED=0x10,            /* Interpret addr exactly.  */
+  MAP_FILE=0,
+  MAP_ANONYMOUS=0x20,            /* Don't use a file.  */
+
+
+
+  in=0,
+  out=1,
+  err=2,
+  null=0;
+  
+function getdents (int64 f;pointer b,int64 n) {
+
+  f:=sysasm.syscall (78,f,b,n,0,0,0);
+}
+
+function seek (;int64 f,int64 l,int64 m) {
+
+  f:=sysasm.syscall (8,f,l,m,0,0,0);
+}
+
+function write (;int64 f,pointer b,int64 n) {
+
+  sysasm.syscall (1,f,b,n,0,0,0);
+}
+
+function read (int64 f;pointer b,int64 n) {
+
+  f:=sysasm.syscall (0,f,b,n,0,0,0);
+}
+
+function open (pointer n;int64 a,int64 m) {
+  
+  n:=sysasm.syscall (2,n,a,m,0,0,0);
+}
+
+function waitid (int64 idt;int64 id,int64 i,int64 o) {
+    
+  idt:=sysasm.syscall (247,idt,id,i,o,0,0);
+}
+
+function close (;int64 f) {
+    
+  sysasm.syscall (0x03,f,0,0,0,0,0);
+}
+
+function mprotect (pointer a;int64 l,int64 p) {
+
+  a:=sysasm.syscall (10,a,l,p,0,0,0);
+}
+
+function fork (int64 pid;) {
+
+  pid:=sysasm.syscall (57,0,0,0,0,0,0);
+}
+
+function execve (pointer path;pointer param,int64 env) {
+
+  path:=sysasm.syscall (59,path,param,env,0,0,0);
+}
+
+function ioctl (;int64 f,int64 c,pointer b) {
+
+  sysasm.syscall (16,f,c,b,0,0,0);
+}
+
+function exit (;int64 e) {
+
+  sysasm.syscall (60,e,0,0,0,0,0);
+}
+
+function brk (pointer p;) {
+    
+  p:=sysasm.syscall (12,p,0,0,0,0,0);
+}
+
+function memory (int64 n;) {
+  pointer p=sysasm.syscall (12,0,0,0,0,0,0);
+  
+  sysasm.syscall (12,p+n,0,0,0,0,0);
+  n:=p;
+}
+
+function main {
+  write (out,"Hello World!\n",13);
+}
+

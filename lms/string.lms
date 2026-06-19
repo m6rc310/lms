@@ -1,0 +1,294 @@
+/*
+    Este codigo es parte de "lmsc"
+    Copyright (C) 2026  Marcelo Reina Aguilar
+
+    Este programa es software libre: usted puede redistribuirlo y/o modificarlo
+    bajo los términos de la Licencia Pública General de GNU publicada por
+    la Fundación para el Software Libre, ya sea la versión 3 de la Licencia,
+    o (a su elección) cualquier versión posterior.
+
+    Este programa se distribuye con la esperanza de que sea útil, pero
+    SIN NINGUNA GARANTÍA; ni siquiera la garantía implícita de
+    COMERCIABILIDAD o IDONEIDAD PARA UN FIN DETERMINADO. Consulte la
+    Licencia Pública General de GNU para más detalles.
+
+    Debería haber recibido una copia de la Licencia Pública General de GNU
+    junto con este programa. En caso contrario, consulte <https://www.gnu.org/licenses/>.
+*/
+
+unit string;
+
+import system (int64 out,write:0:3);
+
+pointer
+  hexdigit="0123456789abcdef",
+  buffer="01234567890123456789",
+  fbuffer="012345678901234567890123456789";
+
+int8 hexDigit=16,floatDigit=14,error;
+
+function setHexDigit (;int8 h) {
+    hexDigit:=h;
+}
+
+function decimalToInt (pointer s;) {
+  int64 i=0,r=0;
+  
+  do {
+    if (s[i,int8]=0) break;
+    if ('0'<=s[i,int8] and s[i,int8]<='9')
+      r:=r*10+s[i,int8]-'0';
+    else {
+      error:=-1;
+      break decimalToInt;
+    }
+    i:=i+1;
+    continue;
+  }
+  error:=0;
+  s:=r;
+}
+
+function length (pointer s;) {
+  int64 l=0;
+
+  do {
+    if (s[l,int8]=0) break;
+    l:=l+1;
+    continue;
+  }
+  s:=l;
+}
+
+function indexOfChar (pointer s;int8 c) {
+  int64 l=0;
+
+  do {
+    if (s[l,int8]=0) break;
+    if (s[l,int8]=c) {
+      s:=l;
+      break indexOfChar;
+    }
+    l:=l+1;
+    continue;
+  }
+  s:=-1;
+}
+
+function copy (;pointer d,pointer s) {
+  d[int8]:=s[int8];
+  if (s[int8]=0) break;
+  s:=s+1;
+  d:=d+1;
+  continue;
+}
+
+function concat (;pointer d,pointer s) {
+  do {
+    if (d[int8]=0) break;
+    d:=d+1;
+    continue;
+  }
+  do {
+    d[int8]:=s[int8];
+    if (s[int8]=0) break;
+    s:=s+1;
+    d:=d+1;
+    continue;
+  }
+}
+
+function compare (pointer d;pointer s) {
+  int8 n;
+
+  do {
+    n:=d[int8]-s[int8];
+    if (s[int8]=0 or n<>0) break;
+    s:=s+1;
+    d:=d+1;
+    continue;
+  }
+  d:=n;
+}
+
+function write (;int64 f,pointer s) {
+  system.write (f,s,length (s));
+}
+
+function writeln (;int64 f,pointer s) {
+    system.write (f,s,length (s));
+    system.write (f,"\n",1);
+}
+
+function hexadecimal (int64 c;) {
+  int8 i=hexDigit+2;
+
+  buffer[0,int8]:='0';buffer[1,int8]:='x';
+  buffer[i,int8]:=0;
+  do {
+    i:=i-1;
+    buffer[i,int8]:=hexdigit[c&0xf,int8];
+    c:=shr (c,4);
+    if (i>2) continue;
+  }
+  c:=buffer;
+}
+
+function reverse (;pointer s) {
+  pointer p;
+  int8 a;
+  
+  p:=s+length (s);
+  do {
+    if (p=s) break;
+    p:=p-1;
+    if (p=s) break;
+    a:=p[int8];
+    p[int8]:=s[int8];
+    s[int8]:=a;
+    s:=s+1;
+    continue;
+  }
+}
+
+function decimal (int64 c;) {
+  int64 r;
+  pointer p=buffer;
+
+  if (c<0) {
+    c:=-c;
+    p[int8]:='-';
+    p:=p+1;
+  }
+  do {
+    r:=c%10;
+    c:=c/10;
+    p[int8]:='0'+r;
+    p:=p+1;
+    if (c<>0) continue;
+  }
+  p[int8]:=0;
+  if (buffer[int8]='-') reverse (buffer+1);
+  else reverse (buffer);
+  c:=buffer;
+}
+
+function float (int64 f;) {
+  pointer p=fbuffer;
+  int64 i=1,d,e,x=0;
+
+  if (f&0x8000000000000000<>0) p[int8]:='-';
+  else p[int8]:='+';
+  e:=(shr (f,52)&0x7ff)-1023;
+  f:=f&0xfffffffffffff;
+  if (e=-1023 and f=0) {p[i,int8]:='0';e:=0;}      // underflow
+  else {
+    f:=f|0x10000000000000;
+    do {
+      if (e>=3) {f:=shl (f,3);e:=e-3;}
+      else if (e>0) {f:=shl (f,e);e:=0;}
+      else if (e<=-3) {f:=shr (f*10,3);e:=e+3;x:=x-1;}
+      else if (e<0) {f:=shr (f*10,-e);e:=0;x:=x-1;}
+      d:=shr (f,52);
+      if (d>=10) {
+        f:=f/10;
+        x:=x+1;
+      }
+      if (e<>0) continue;
+    }
+    d:=shr (f,52);
+    p[i,int8]:='0'+d;
+    f:=f-shl (d,52);
+  }
+  i:=i+1;
+  p[i,int8]:='.';
+  i:=i+1;
+  do {
+    d:=(f*10)/0x10000000000000;
+    p[i,int8]:='0'+d;
+    i:=i+1;
+    f:=f*10-shl (d,52);
+    if (i<floatDigit+2) continue;
+  }
+  p[i,int8]:='e';
+  i:=i+1;
+  if (x>=0) {
+    p[i,int8]:='+';
+    i:=i+1;
+  }
+  copy (p+i,decimal (x));
+  f:=fbuffer;
+}
+
+/*
+function float (float64 f;) {
+  pointer p=fbuffer;
+  float64 l,r;
+  int64 i=1,d,e;
+  
+  l:=log (f);
+  e:=l;
+  if (e<-1022) e:=-1022;
+  if (1023<e) e:=1023;
+  r:=10.0E0^(l-e);
+  d:=r;
+  p[int8]:='0'+d;
+  p[i,int8]:='.';
+  do {
+    r:=r-d;
+    r:=r*10;
+    i:=i+1;
+    d:=r-0.5E0;
+    p[i,int8]:='0'+d;
+    if (i<floatDigit) continue;
+  }
+  i:=i+1;
+  p[i,int8]:='e';
+  i:=i+1;
+  if (e>=0) {
+    p[i,int8]:='+';
+    i:=i+1;
+  }
+//  else p[i,int8]:='-';
+  copy (p+i,decimal (e));
+  f:=fbuffer;
+}
+*/
+
+function deleteChar (pointer s;int16 l) {
+  do {
+    s[l,int8]:=s[l+1,int8];
+    l:=l+1;
+    if (s[l,int8]<>0) continue;
+  }
+}
+
+function insertChar (pointer s;int16 l,int32 c) {
+  int16 i=l+length (s+l),j=1;
+  
+  if (c&0xff00<>0) j:=2;
+  if (c&0xff0000<>0) j:=3;
+  do {
+    s[i+j,int8]:=s[i,int8];
+    i:=i-1;
+    if (i>=l) continue;
+  }
+  s[l,int8]:=c;
+  if (j>=2) s[l+1,int8]:=shr (c,8);
+  if (j=3) s[l+2,int8]:=shr (c,16);
+}
+
+
+function main (int8 code;
+  int64 parameters,pointer parameter,pointer enviroment) {
+  writeln (system.out,hexadecimal (0x123456789abcdef));
+  writeln (system.out,decimal (123456789));
+  writeln (system.out,float (1.23456789E0));
+  writeln (system.out,float (0.123456789));
+  writeln (system.out,float (1000.0));
+  writeln (system.out,float (0.0));
+  copy (buffer,"Hello World!\n");
+  insertChar (buffer,5,'1');
+  write (system.out,buffer);
+  write (system.out,"Hello World!\n");
+}

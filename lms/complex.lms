@@ -1,0 +1,54 @@
+unit complex;
+
+import system (
+  int64 out
+);
+
+import string (
+  float:1:0,
+  copy:0:2,
+  concat:0:2,
+  write:0:2,
+  writeln:0:2
+);
+
+pointer buffer="01234567890123456789012345678901234567890123456789";
+
+function complex (float64 a.r,float64 a.i;) {
+}
+
+function add (float64 a.r,float64 a.i;float64 b.r,float64 b.i) {
+  a.r:=a.r+b.r;
+  a.i:=a.i+b.i;
+}
+
+function mul (float64 a.r,float64 a.i;float64 b.r,float64 b.i) {
+  float64 r;
+  
+  r:=a.r*b.r-a.i*b.i;
+  a.i:=a.i*b.r+b.i*a.r;
+  a.r:=r;
+}
+
+function toString (float64 r;float64 i) {
+  string.copy (buffer,"(");
+  string.concat (buffer,string.float (r));
+  string.concat (buffer,",");
+  string.concat (buffer,string.float (i));
+  string.concat (buffer,")");
+  r:=buffer;
+}
+
+function main (int8 code;
+  int64 parameters,pointer parameter,pointer enviroment) {
+  float64 a.r=1.0,a.i=1.0,b.r=0.5,b.i=0.5,c.r,c.i;
+
+  string.writeln (system.out,toString (a.r,a.i));
+  string.writeln (system.out,toString (b.r,b.i));
+  c.r,c.i:=complex (a.r,a.i)+[complex]complex (b.r,b.i);
+  string.write (system.out,"Suma     : ");
+  string.writeln (system.out,toString (c.r,c.i));
+  c.r,c.i:=complex (a.r,a.i)*[complex]complex (b.r,b.i);
+  string.write (system.out,"Producto : ");
+  string.writeln (system.out,toString (c.r,c.i));
+}

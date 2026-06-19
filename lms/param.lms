@@ -1,0 +1,35 @@
+unit param;
+
+import string (
+  write:0:2,
+  writeln:0:2,
+  length:1:0
+);
+
+import system (
+  int64 out
+);
+
+
+function main (int8 code;
+  int64 parameters,pointer parameter,pointer enviroment) {
+  pointer p,line;
+  int16 i;
+
+  p:=parameter;
+  i:=0;
+  do {
+    string.writeln (system.out,p);
+    p:=p+string.length (p)+1;
+    i:=i+1;
+    if (i<parameters) continue;
+  }
+  string.write (system.out,"ENV...\n");
+  do {
+    p:=enviroment[pointer];
+    if (p=0) break;
+    string.writeln (system.out,p);
+    enviroment:=enviroment+8;
+    continue;
+  }
+}
