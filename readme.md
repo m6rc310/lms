@@ -1,15 +1,15 @@
-# Compilador para "Leguaje Modular Simple" lmsc
+# Compilador para "Lenguaje Modular Simple" lmsc
 
 Es cierto que ya hay en el mundo muchos lenguajes de programación, pero no me he podido resistir a crear uno mas.
 Este lenguaje es muy sencillo, no se utilizan Lex o Yacc ni estructuras de datos complejas para generar el binario,
 practicamente se va creando el ensamblador (NASM) al vuelo, el codigo generado no es especialmente eficiente, pero el
 compilador es sencillo y muy pequeñito (la version en C 46KB y el autocompilador en lms 62KB), como se ve se crea codigo
-mas largo, esto puede deberse a que en las llamadas a función se cargan todos los parametros en la pila y que por ejemplo en los if...else se crean demasiadas etiquetas, además la única optimización implementada en el compilador es que si detecta que se crea un push rax seguida de un pop rax no se hace nada :-) .
+mas largo, esto puede deberse a que en las llamadas a función se cargan todos los parametros en la pila y que por ejemplo en los if...else se crean demasiadas etiquetas, además la única optimización implementada en el compilador es que si detecta que se crea un "push rax" seguida de un "pop rax" no se hace nada :-) .
 
-El lenguaje es modular como se ha dicho antes, el nombre del modulo se indica al principio con **unit** y cada modulo puede tener
-su propio main, las funciones se indican con **function** y solo existen los tipos de datos "primitivos", int8, int16, int32,
- int64, uint8, uint16, uint32, uint64 y pointer, la unica diferencia entre un int y un uint es a la de las conversiones (se
-añaden ceros o extension de signo).
+El lenguaje es modular como se ha dicho antes, el nombre del modulo se indica al principio con **unit** y cada modulo puede
+tener su propio main, las funciones se indican con **function** y solo existen los tipos de datos "primitivos": int8, int16,
+int32, int64, uint8, uint16, uint32, uint64 y pointer, la unica diferencia entre un int y un uint es a la hora de las
+conversiones (se añaden ceros o extension de signo).
 
 Los bloques de codigo se indican con **{}** y si se quieren nombrar se puede añadir **do nombre** delante, **continue** salta
 al comienzo del bloque y **break** al final, pudiendo añadir el nombre del bloque.
@@ -116,6 +116,6 @@ function main (int8 code;
 
 Como se ve en este ejemplo, los identificadores pueden incluir el "punto".
 
-Pero para que pueda verse que se puede hacer algo un poco mas, he escrito un emulador de z80 que pasa los test de las
+Pero para que pueda verse que se puede hacer algo un poco mas complejo, he escrito un emulador de z80 que pasa los test de las
 instrucciones documentadas y no documentadas de este procesador, y un modulo de spectrum que emula la pantalla y teclas
 con lo que se puede ejecutar algun programa...
